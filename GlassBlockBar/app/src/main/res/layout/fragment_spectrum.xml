@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/item_detail_root_layout"
+    style="?android:attr/textAppearanceLarge"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:orientation="vertical"
+    tools:context=".ColorPickerFragment" >
+
+    <LinearLayout
+        android:id="@+id/beat_indicator_root"
+        style="?android:attr/textAppearanceLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        tools:context=".ColorPickerFragment" >
+
+        <View
+            android:id="@+id/low_beat_view"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:background="#FF0000"/>
+
+        <View
+            android:id="@+id/mid_beat_view"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:background="#00FF00"/>
+
+        <View
+            android:id="@+id/high_beat_view"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:background="#0000FF"/>
+
+    </LinearLayout>
+    
+    <androidx.appcompat.widget.AppCompatSeekBar
+        android:id="@+id/seek_bar"
+        android:layout_width="400dp"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/beat_indicator_root"/>
+
+</RelativeLayout>
