@@ -46,6 +46,11 @@ class LEDFunctionListActivity : AppCompatActivity(), ConnectionObserver {
         setupGlassBlockViewModel()
     }
 
+    override fun onStop() {
+        super.onStop()
+        glassBlockViewModel?.disconnect()
+    }
+
     private fun setupGlassBlockViewModel() {
         (application as? GlassBlockBarApplication)?.let {
             val factory = AppViewModelFactory(it)

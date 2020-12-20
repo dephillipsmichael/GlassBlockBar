@@ -46,16 +46,6 @@ class GlassBlockBarViewModel(application: Application) : AndroidViewModel(applic
         glassBlockManager.writeEqualizer(eqValues)
     }
 
-    public fun sendFunction(functionByte: Byte) {
-        val functionByteArray = ByteArray(1) { functionByte }
-        glassBlockManager.writeFunction(functionByteArray)
-    }
-
-    public fun sendGlobalBrightness(brightnessByte: Byte) {
-        val brightnessByteArray = ByteArray(1) { brightnessByte }
-        glassBlockManager.writeGlobalBrightness(brightnessByteArray)
-    }
-
     /**
      * Reconnects to previously connected device.
      * If this device was not supported, its services were cleared on disconnection, so
@@ -76,7 +66,7 @@ class GlassBlockBarViewModel(application: Application) : AndroidViewModel(applic
     /**
      * Disconnect from peripheral.
      */
-    private fun disconnect() {
+    public fun disconnect() {
         device = null
         glassBlockManager.disconnect().enqueue()
     }

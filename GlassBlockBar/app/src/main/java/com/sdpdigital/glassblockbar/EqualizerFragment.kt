@@ -45,8 +45,14 @@ class EqualizerFragment : Fragment() {
     val EQ_COLS = 9
 
     // Set of current low, mid, high values
-    var intensityFrameSum = Array<Double>(EQ_COLS) { 0.0 } // Initialize all to 0
-    var maxFrameIntensities = Array<Double>(EQ_COLS) { 0.0 } // Initialize all to 0
+    var intensityFrameSum = Array(EQ_COLS) { 0.0 } // Initialize all to 0
+    // Max frame intensities, consider putting this at a 2 second rolling reset
+    var maxFrameIntensities = Array(EQ_COLS) { 0.0 } // Initialize all to 0
+
+    // Rolling max every 2 seconds
+    var lastMaxIntensityTime = System.currentTimeMillis()
+    var maxIntensityRefreshTime = 3000 // 2 seconds
+    var nextMaxFrameIntensities = Array(EQ_COLS) { 0.0 } // Initialize all to 0
 
     // Glass Blocks only get 80 fps, so only update at about 30 fps
     var lastFpsTime = System.currentTimeMillis()
@@ -172,43 +178,35 @@ class EqualizerFragment : Fragment() {
 
     private val onBeatDetectedListener: SpectrumGauge.OnBeatDetectedListener = object : SpectrumGauge.OnBeatDetectedListener {
         override fun onHighBeatDetectedOn(intensity: Float) {
-            mainHandler.postDelayed({
-                forceBeatSend = true
-            }, 5) // 10 ms delay to get big intensities
+            forceBeatSend = true
         }
 
         override fun onBeatDetectedOff() {
-            forceBeatSend = true
+            //forceBeatSend = true
         }
 
         override fun onLowBeatDetectedOn(intensity: Float) {
-            mainHandler.postDelayed({
-                forceBeatSend = true
-            }, 5) // 10 ms delay to get big intensities
+            forceBeatSend = true
         }
 
         override fun onHighBeatDetectedOff() {
-            forceBeatSend = true
+            //forceBeatSend = true
         }
 
         override fun onLowBeatDetectedOff() {
-            forceBeatSend = true
+            //forceBeatSend = true
         }
 
         override fun onMidBeatDetectedOn(intensity: Float) {
-            mainHandler.postDelayed({
-                forceBeatSend = true
-            }, 5) // 10 ms delay to get big intensities
-        }
-
-        override fun onMidBeatDetectedOff() {
             forceBeatSend = true
         }
 
+        override fun onMidBeatDetectedOff() {
+            //forceBeatSend = true
+        }
+
         override fun onBeatDetectedOn(intensity: Float) {
-            mainHandler.postDelayed({
-                forceBeatSend = true
-            }, 5) // 10 ms delay to get big intensities
+            forceBeatSend = true
         }
     }
 
@@ -227,8 +225,17 @@ class EqualizerFragment : Fragment() {
             //val logVals = fft.map { "$it, " }
             //Log.d(LOG_TAG, "FFT: $logVals")
 
-            // Check if a frame has gone by and we can send to the glass wall
             val now = System.currentTimeMillis()
+            // Check if the rolling max needs a refresh to stay current
+            if ((now - lastMaxIntensityTime) > maxIntensityRefreshTime) {
+                for (i in nextMaxFrameIntensities.indices) {
+                    maxFrameIntensities[i] = nextMaxFrameIntensities[i]
+                    nextMaxFrameIntensities[i] = 0.0
+                }
+                lastMaxIntensityTime = now
+            }
+
+            // Check if a frame has gone by and we can send to the glass wall
             if (((now - lastFpsTime) > frameTimeInMillis) || forceBeatSend) {
                 lastFpsTime = now
 
@@ -236,7 +243,10 @@ class EqualizerFragment : Fragment() {
 
                 // Reset max intensities to base eq height off of
                 for ((col, intensity) in intensityFrameSum.withIndex()) {
-                    maxFrameIntensities[col] = max(intensity, maxFrameIntensities[col])
+
+                    // Update counter for current max intensity
+                    nextMaxFrameIntensities[col] = max(intensity, nextMaxFrameIntensities[col])
+
                     // Normalize intensities to 0...4 inclusive
                     normalized[col] = (((intensity.toFloat() / (maxFrameIntensities[col] / 1.2)).toFloat()) * 6).toInt()
 

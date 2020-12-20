@@ -91,28 +91,6 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
                 .enqueue()
     }
 
-    public fun writeFunction(functionBytes: ByteArray) {
-        // We do not want any commands queueing up
-        cancelQueue()
-        // You may easily enqueue more operations here like such:
-        writeCharacteristic(functionCharacteristic, functionBytes)
-                .done { device: BluetoothDevice? ->
-                    //Log.d("EQ_DEBUG", "Eq sent $debug")
-                }
-                .enqueue()
-    }
-
-    public fun writeGlobalBrightness(brightnessBytes: ByteArray) {
-        // We do not want any commands queueing up
-        cancelQueue()
-        // You may easily enqueue more operations here like such:
-        writeCharacteristic(brightnessCharacteristic, brightnessBytes)
-                .done { device: BluetoothDevice? ->
-                    //Log.d("EQ_DEBUG", "Eq sent $debug")
-                }
-                .enqueue()
-    }
-
     /**
      * BluetoothGatt callbacks object.
      */
@@ -123,13 +101,12 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
         public override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
             val service =
                 gatt.getService(LED_SERVICE_UUID)
+
             if (service != null) {
                 argbCharacteristic = service.getCharacteristic(ARGB_CHAR)
                 lowMidHighCharacteristic = service.getCharacteristic(LMH_CHAR)
                 equalizerCharacteristic = service.getCharacteristic(EQ_CHAR)
                 equalizerLongCharacteristic = service.getCharacteristic(EQ_LONG_CHAR)
-//                functionCharacteristic = service.getCharacteristic(FUNC_CHAR)
-//                brightnessCharacteristic = service.getCharacteristic(BRIGHTNESS_CHAR)
             }
             // Return true if all required services have been found
             return argbCharacteristic != null &&
@@ -207,6 +184,7 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
     companion object {
         val LED_SERVICE_UUID =
             UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e")
+
         val ARGB_CHAR =
             UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
         val LMH_CHAR =
@@ -215,9 +193,5 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
                 UUID.fromString("6e400004-b5a3-f393-e0a9-e50e24dcca9e")
         val EQ_LONG_CHAR =
                 UUID.fromString("6e400005-b5a3-f393-e0a9-e50e24dcca9e")
-        val FUNC_CHAR =
-                UUID.fromString("6e400006-b5a3-f393-e0a9-e50e24dcca9e")
-        val BRIGHTNESS_CHAR =
-                UUID.fromString("6e400007-b5a3-f393-e0a9-e50e24dcca9e")
     }
 }
