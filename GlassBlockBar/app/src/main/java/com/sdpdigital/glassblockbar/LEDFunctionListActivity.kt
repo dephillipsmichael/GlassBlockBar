@@ -1,6 +1,7 @@
 package com.sdpdigital.glassblockbar
 
 import android.bluetooth.BluetoothDevice
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -10,7 +11,9 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.sdpdigital.glassblockbar.view.BaseListRecyclerAdapter
 import com.sdpdigital.glassblockbar.viewmodel.GlassBlockBarViewModel
 import no.nordicsemi.android.ble.livedata.state.ConnectionState
 import no.nordicsemi.android.ble.observer.ConnectionObserver
@@ -29,11 +32,11 @@ class LEDFunctionListActivity : AppCompatActivity(), ConnectionObserver {
     val LOG_TAG = (LEDFunctionListActivity::class).simpleName
 
     companion object {
-        val colorPickerTitle = "Color Picker"
-        val spectrumTitle = "Spectrum"
+        val colorPickerTitle = "Animation Picker"
+        val beatDetectorTitle = "Beat Detector"
         val equalizerTitle = "Equalizer"
     }
-    private val featureList = arrayOf(colorPickerTitle, spectrumTitle, equalizerTitle)
+    private val featureList = listOf(colorPickerTitle, beatDetectorTitle, equalizerTitle)
 
     var glassBlockViewModel: GlassBlockBarViewModel? = null
 
@@ -75,55 +78,23 @@ class LEDFunctionListActivity : AppCompatActivity(), ConnectionObserver {
     }
 
     private fun setupRecyclerView(recyclerView: RecyclerView) {
-        recyclerView.adapter = SimpleItemRecyclerViewAdapter(this, featureList)
-    }
-
-    class SimpleItemRecyclerViewAdapter(private val parentActivity: LEDFunctionListActivity,
-                                        private val values: Array<String>) :
-
-            RecyclerView.Adapter<SimpleItemRecyclerViewAdapter.ViewHolder>() {
-
-        private val onClickListener: View.OnClickListener
-
-        init {
-            onClickListener = View.OnClickListener { v ->
-                val itemString = v.tag as String
-                itemString?.let {
-                    val fragment = when(itemString) {
-                        colorPickerTitle -> ColorPickerFragment()
-                        spectrumTitle -> SpectrumFragment()
-                        equalizerTitle -> EqualizerFragment()
-                        else -> ColorPickerFragment()
-                    }
-                    parentActivity.supportFragmentManager
-                            .beginTransaction()
-                            .replace(R.id.item_detail_container, fragment)
-                            .commit()
+        recyclerView?.layoutManager = LinearLayoutManager(this)
+        val adapter = BaseListRecyclerAdapter(this, featureList)
+        recyclerView?.adapter = adapter
+        adapter.setClickListener(object: BaseListRecyclerAdapter.ItemClickListener {
+            override fun onItemClick(view: View?, position: Int) {
+                val fragment = when (featureList[position]) {
+                    colorPickerTitle -> ColorPickerFragment()
+                    beatDetectorTitle -> BeatDetectorFragment()
+                    equalizerTitle -> EqualizerFragment()
+                    else -> ColorPickerFragment()
                 }
+                supportFragmentManager
+                        .beginTransaction()
+                        .replace(R.id.item_detail_container, fragment)
+                        .commit()
             }
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val view = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_list_content, parent, false)
-            return ViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val item = values[position]
-            holder.idView.text = item
-
-            with(holder.itemView) {
-                tag = item
-                setOnClickListener(onClickListener)
-            }
-        }
-
-        override fun getItemCount() = values.size
-
-        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            val idView: TextView = view.findViewById(R.id.id_text)
-        }
+        })
     }
 
     override fun onDeviceDisconnecting(device: BluetoothDevice) {

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_child_view"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="@dimen/text_margin"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/seek_bar_title_text_view"
+        style="?android:attr/textAppearanceLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/black"
+        android:textSize="@dimen/slider_text_size"/>
+
+    <androidx.appcompat.widget.AppCompatSeekBar
+        android:id="@+id/speed_slider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:thumb="@drawable/glass_block_thumb"
+        android:progressDrawable="@drawable/view_seekbar_progress"
+        android:padding="@dimen/medium_margin"
+        android:max="32"/>
+
+</LinearLayout>

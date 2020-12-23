@@ -21,10 +21,12 @@
             android:layout_width="540dp"
             android:layout_height="540dp"/>
 
-        <com.skydoves.colorpickerview.sliders.AlphaSlideBar
-            android:id="@+id/alpha_slide_bar"
-            android:layout_width="540dp"
-            android:layout_height="60dp"
+        <androidx.appcompat.widget.AppCompatSeekBar
+            style="@style/Theme.GlassBlockSeekBar"
+            android:id="@+id/seek_bar_alpha"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="255"
             android:layout_marginTop="32dp"/>
 
     </LinearLayout>
@@ -36,13 +38,8 @@
         android:orientation="vertical"
         tools:context=".ColorPickerFragment" >
 
-        <androidx.appcompat.widget.AppCompatSeekBar
-            android:id="@+id/speed_slider"
-            android:layout_width="match_parent"
-            android:layout_height="40dp"/>
-
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_view_function"
+            android:id="@+id/recycler_view_animations"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
 

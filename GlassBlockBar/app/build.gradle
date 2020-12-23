@@ -46,6 +46,9 @@ dependencies {
     // Color picker wheel
     implementation 'com.github.skydoves:colorpickerview:2.2.2'
 
+    // Expandable RecyclerView for Animation Picker View
+    implementation 'com.thoughtbot:expandablecheckrecyclerview:1.4'
+
     // BLE helper library
     implementation 'no.nordicsemi.android:ble-common:2.2.4'
     implementation 'no.nordicsemi.android:ble-livedata:2.2.4'

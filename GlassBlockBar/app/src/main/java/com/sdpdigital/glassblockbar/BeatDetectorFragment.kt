@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.RelativeLayout
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
+import androidx.appcompat.widget.AppCompatSeekBar
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.sdpdigital.glassblockbar.beatdetection.InstrumentPanel
@@ -24,9 +25,9 @@ import kotlin.math.min
  * in two-pane mode (on tablets) or a [LEDFunctionDetailActivity]
  * on handsets.
  */
-class SpectrumFragment : Fragment() {
+class BeatDetectorFragment : Fragment() {
 
-    val LOG_TAG: String? = (SpectrumFragment::class).simpleName
+    val LOG_TAG: String? = (BeatDetectorFragment::class).simpleName
 
     /**
      * The dummy content this fragment is presenting.
@@ -48,12 +49,24 @@ class SpectrumFragment : Fragment() {
     val LOW_IDX = 0
     val MID_IDX = 1
     val HIGH_IDX = 2
+
+    // Current beat intensities in low, mid, and high freq bands.
     var lowMidHighValues = arrayOf(0, 0, 0);
     var highestLowMidHighIntensities = arrayOf(0f, 0f, 0f)
 
+    // Used to throttle beats
+    var canSendBeat = arrayOf(true, true, true)
+
+    var lastResetOfHighs = System.currentTimeMillis()
+    val resetDuration = 2000 // every 2 seconds
+    var runningWindowHighestLowMidHighIntensities = arrayOf(0f, 0f, 0f)
+
     var glassBlockViewModel: GlassBlockBarViewModel? = null
 
-    var thresholdValue = 0
+    val seekBarProgress = arrayOf(0f, 0f, 0f)
+    var lowsSeekBar: AppCompatSeekBar? = null
+    var midsSeekBar: AppCompatSeekBar? = null
+    var highsSeekBar: AppCompatSeekBar? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,10 +74,32 @@ class SpectrumFragment : Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
-        val rootView = inflater.inflate(R.layout.fragment_spectrum, container, false)
+        val rootView = inflater.inflate(R.layout.fragment_beat_detector, container, false)
 
         // Get root layout
         val relativeRoot = rootView.findViewById<RelativeLayout>(R.id.item_detail_root_layout)
+
+        val progressListener = object : OnSeekBarChangeListener {
+            override fun onProgressChanged(seekbar: SeekBar?, progress: Int, p2: Boolean) {
+                (seekbar?.tag as? Int)?.let {
+                    val newProgress = (progress.toFloat() / (seekbar.max.toFloat()))
+                    seekBarProgress[it] = newProgress
+                    Log.d(LOG_TAG,"Seek bar $it changed to $newProgress")
+                }
+            }
+            override fun onStartTrackingTouch(p0: SeekBar?)  { /** no-op */ }
+            override fun onStopTrackingTouch(p0: SeekBar?) { /** no-op */ }
+        }
+
+        lowsSeekBar = rootView.findViewById(R.id.seek_bar_lows)
+        lowsSeekBar?.tag = LOW_IDX
+        lowsSeekBar?.setOnSeekBarChangeListener(progressListener)
+        midsSeekBar = rootView.findViewById(R.id.seek_bar_mids)
+        midsSeekBar?.tag = MID_IDX
+        midsSeekBar?.setOnSeekBarChangeListener(progressListener)
+        highsSeekBar = rootView.findViewById(R.id.seek_bar_highs)
+        highsSeekBar?.tag = HIGH_IDX
+        highsSeekBar?.setOnSeekBarChangeListener(progressListener)
 
         // We want the audio controls to control our sound volume.
         activity?.volumeControlStream = AudioManager.STREAM_MUSIC
@@ -82,23 +117,6 @@ class SpectrumFragment : Fragment() {
         lowBeatView = rootView.findViewById(R.id.low_beat_view)
         midBeatView = rootView.findViewById(R.id.mid_beat_view)
         highBeatView = rootView.findViewById(R.id.high_beat_view)
-
-        val seekBar = rootView.findViewById<SeekBar>(R.id.seek_bar)
-        seekBar.max = 10000
-        seekBar.setOnSeekBarChangeListener(object: OnSeekBarChangeListener {
-            override fun onProgressChanged(p0: SeekBar?, progress: Int, p2: Boolean) {
-                thresholdValue = progress
-            }
-
-            override fun onStartTrackingTouch(p0: SeekBar?) {
-                // no-op
-            }
-
-            override fun onStopTrackingTouch(p0: SeekBar?) {
-                // no-op
-            }
-
-        })
 
         setupGlassBlockViewModel()
 
@@ -143,9 +161,18 @@ class SpectrumFragment : Fragment() {
             return 0
         }
 
-        if (intensity > highestLowMidHighIntensities[maxIdx]) {
-            highestLowMidHighIntensities[maxIdx] = intensity
-            return 255
+        if (intensity > runningWindowHighestLowMidHighIntensities[maxIdx]) {
+            runningWindowHighestLowMidHighIntensities[maxIdx] = intensity
+        }
+
+        // Reset to relate 4 window high intensities
+        val now = System.currentTimeMillis()
+        if ((now - lastResetOfHighs) > resetDuration) {
+            for (i in 0 .. HIGH_IDX) {
+                highestLowMidHighIntensities[i] = runningWindowHighestLowMidHighIntensities[i]
+                runningWindowHighestLowMidHighIntensities[i] = 0f
+            }
+            lastResetOfHighs = now
         }
 
         val normalizedFactor = intensity / highestLowMidHighIntensities[maxIdx]
@@ -154,15 +181,17 @@ class SpectrumFragment : Fragment() {
         return byteScaled
     }
 
-    fun processIntensity(intensity: Float, lowMidHighIdx: Int) {
+    fun processIntensity(intensity: Float, lowMidHighIdx: Int): Boolean {
         val byteIntensity = convertIntensityTo255(intensity, lowMidHighIdx)
-        if (lowMidHighValues[lowMidHighIdx] == byteIntensity) {
-            // No change so don't update BLE device
-            return
-        }
         lowMidHighValues[lowMidHighIdx] = byteIntensity
-        val newLowMidHigh = ByteArray(3) { idx -> lowMidHighValues[idx].toByte() }
-        glassBlockViewModel?.sendLowMidHigh(newLowMidHigh)
+
+        if (canSendBeat[lowMidHighIdx]) {
+            canSendBeat[lowMidHighIdx] = false
+            val newLowMidHigh = ByteArray(3) { idx -> lowMidHighValues[idx].toByte() }
+            glassBlockViewModel?.sendLowMidHigh(newLowMidHigh)
+            return true
+        }
+        return false
     }
 
     private fun setupGlassBlockViewModel() {
@@ -206,12 +235,20 @@ class SpectrumFragment : Fragment() {
 
         override fun onLowBeatDetectedOn(intensity: Float) {
             mainHandler.post {
-                Log.d(LOG_TAG, "Low: $intensity")
-                if (intensity * 10000 > thresholdValue) {
-                    processIntensity(intensity, LOW_IDX)
-                    lowBeatView?.visibility = View.VISIBLE
+                val threshold = seekBarProgress[LOW_IDX] *
+                        highestLowMidHighIntensities[LOW_IDX]
+                if (intensity > threshold ) {
+                    if (processIntensity(intensity, LOW_IDX)) {
+                        lowBeatView?.visibility = View.VISIBLE
+                        mainHandler.postDelayed({
+                            lowBeatView?.visibility = View.INVISIBLE
+                            canSendBeat[LOW_IDX] = true
+                        }, 200)
+                    }
                 }
+                Log.d(LOG_TAG, "Low: $intensity")
             }
+
 //            if (intensity * 10000 > mThresholdValue) {
 //                mainHandler.post({
 //                    (findViewById<View>(R.id.txt_low) as TextView).text = "Low: " + intensity * 10000
@@ -229,9 +266,16 @@ class SpectrumFragment : Fragment() {
         override fun onMidBeatDetectedOn(intensity: Float) {
             mainHandler.post {
                 Log.d(LOG_TAG, "Mid: $intensity")
-                if (intensity * 10000 > thresholdValue) {
-                    processIntensity(intensity, MID_IDX)
-                    midBeatView?.visibility = View.VISIBLE
+                val threshold = seekBarProgress[MID_IDX] *
+                        highestLowMidHighIntensities[MID_IDX]
+                if (intensity > threshold ) {
+                    if (processIntensity(intensity, MID_IDX)) {
+                        midBeatView?.visibility = View.VISIBLE
+                        mainHandler.postDelayed({
+                            midBeatView?.visibility = View.INVISIBLE
+                            canSendBeat[MID_IDX] = true
+                        }, 200)
+                    }
                 }
             }
 //            if (intensity * 10000 > mThresholdValue) {
@@ -249,9 +293,18 @@ class SpectrumFragment : Fragment() {
         override fun onHighBeatDetectedOn(intensity: Float) {
             mainHandler.post {
                 Log.d(LOG_TAG, "High: $intensity")
-                if (intensity * 10000 > thresholdValue) {
-                    processIntensity(intensity, HIGH_IDX)
-                    highBeatView?.visibility = View.VISIBLE
+                val threshold = seekBarProgress[HIGH_IDX] *
+                        highestLowMidHighIntensities[HIGH_IDX]
+                if (intensity > threshold ) {
+                    if (canSendBeat[HIGH_IDX]) {
+                        if (processIntensity(intensity, HIGH_IDX)) {
+                            highBeatView?.visibility = View.VISIBLE
+                            mainHandler.postDelayed({
+                                highBeatView?.visibility = View.INVISIBLE
+                                canSendBeat[HIGH_IDX] = true
+                            }, 200)
+                        }
+                    }
                 }
             }
 //            if (intensity * 10000 > mThresholdValue) {
