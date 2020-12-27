@@ -12,4 +12,6 @@
     <color name="grey">#FFAAAAAA</color>
     <color name="progressGrey">#FF999999</color>
 
+    <color name="clear">#00FFFFFF</color>
+
 </resources>

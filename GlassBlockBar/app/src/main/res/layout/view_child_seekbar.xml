@@ -18,12 +18,10 @@
         android:textSize="@dimen/slider_text_size"/>
 
     <androidx.appcompat.widget.AppCompatSeekBar
+        style="@style/Theme.GlassBlockSeekBar"
         android:id="@+id/speed_slider"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:thumb="@drawable/glass_block_thumb"
-        android:progressDrawable="@drawable/view_seekbar_progress"
-        android:padding="@dimen/medium_margin"
-        android:max="32"/>
+        android:max="48"/>
 
 </LinearLayout>

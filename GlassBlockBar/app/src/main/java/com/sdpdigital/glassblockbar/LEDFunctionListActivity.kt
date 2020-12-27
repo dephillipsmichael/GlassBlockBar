@@ -1,20 +1,20 @@
 package com.sdpdigital.glassblockbar
 
 import android.bluetooth.BluetoothDevice
-import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
+import android.widget.SeekBar
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatSeekBar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.sdpdigital.glassblockbar.view.BaseListRecyclerAdapter
+import com.sdpdigital.glassblockbar.view.VerticalSeekBar
 import com.sdpdigital.glassblockbar.viewmodel.GlassBlockBarViewModel
+import com.skydoves.colorpickerview.sliders.BrightnessSlideBar
 import no.nordicsemi.android.ble.livedata.state.ConnectionState
 import no.nordicsemi.android.ble.observer.ConnectionObserver
 
@@ -32,11 +32,15 @@ class LEDFunctionListActivity : AppCompatActivity(), ConnectionObserver {
     val LOG_TAG = (LEDFunctionListActivity::class).simpleName
 
     companion object {
-        val colorPickerTitle = "Animation Picker"
+        val colorPickerTitle = "Color Picker"
+        val animationPickerTitle = "Animation Picker"
         val beatDetectorTitle = "Beat Detector"
         val equalizerTitle = "Equalizer"
+        val lightComposerTitle = "Light Composer"
     }
-    private val featureList = listOf(colorPickerTitle, beatDetectorTitle, equalizerTitle)
+    private val featureList = listOf(
+            colorPickerTitle, animationPickerTitle, beatDetectorTitle,
+            equalizerTitle, lightComposerTitle)
 
     var glassBlockViewModel: GlassBlockBarViewModel? = null
 
@@ -45,6 +49,7 @@ class LEDFunctionListActivity : AppCompatActivity(), ConnectionObserver {
         setContentView(R.layout.activity_item_list)
 
         setupRecyclerView(findViewById(R.id.item_list))
+        setupBrightnessSlider(findViewById(R.id.seek_bar_brightness))
 
         setupGlassBlockViewModel()
     }
@@ -73,6 +78,21 @@ class LEDFunctionListActivity : AppCompatActivity(), ConnectionObserver {
         }
     }
 
+    private fun setupBrightnessSlider(brightnessSlider: VerticalSeekBar) {
+        brightnessSlider.setVerticalListener(object : VerticalSeekBar.VerticalProgressChangedListener {
+            override fun onTouchUp(seekbar: VerticalSeekBar?, progress: Int) {
+                seekbar?.progress?.let { progress ->
+                    Log.d(LOG_TAG, "Sent new brightness $progress")
+                    val brightnessOnlyARGB = ByteArray(4)
+                    { i -> arrayOf(progress, 0, 0, 0)[i].toByte() }
+                    glassBlockViewModel?.sendARGB(brightnessOnlyARGB)
+                }
+            }
+            override fun progressChanged(seekbar: VerticalSeekBar?, progress: Int) {}
+        })
+        brightnessSlider.progress = brightnessSlider.max - 1
+    }
+
     private fun bleDisconnecting() {
         finish()  // goes back to connection screen
     }
@@ -85,9 +105,11 @@ class LEDFunctionListActivity : AppCompatActivity(), ConnectionObserver {
             override fun onItemClick(view: View?, position: Int) {
                 val fragment = when (featureList[position]) {
                     colorPickerTitle -> ColorPickerFragment()
+                    animationPickerTitle -> AnimationPickerFragment()
                     beatDetectorTitle -> BeatDetectorFragment()
                     equalizerTitle -> EqualizerFragment()
-                    else -> ColorPickerFragment()
+                    lightComposerTitle -> LightComposerFragment()
+                    else -> AnimationPickerFragment()
                 }
                 supportFragmentManager
                         .beginTransaction()
@@ -99,6 +121,7 @@ class LEDFunctionListActivity : AppCompatActivity(), ConnectionObserver {
 
     override fun onDeviceDisconnecting(device: BluetoothDevice) {
         Log.d(LOG_TAG, "Glass Block disconnecting...")
+        bleDisconnecting()
     }
 
     override fun onDeviceDisconnected(device: BluetoothDevice, reason: Int) {

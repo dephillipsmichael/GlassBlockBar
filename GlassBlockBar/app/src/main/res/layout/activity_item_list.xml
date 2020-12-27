@@ -7,13 +7,58 @@
     android:fitsSystemWindows="true"
     tools:context=".LEDFunctionListActivity">
 
-    <FrameLayout
-        android:id="@+id/frameLayout"
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <include layout="@layout/item_list" />
-    </FrameLayout>
+        <FrameLayout
+            android:id="@+id/item_detail_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_toLeftOf="@+id/item_list_container"/>
+
+        <RelativeLayout
+            android:id="@id/item_list_container"
+            android:layout_width="@dimen/item_width"
+            android:layout_height="match_parent"
+            android:layout_marginLeft="16dp"
+            android:layout_marginRight="16dp"
+            android:layout_alignParentRight="true">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/item_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_above="@+id/seek_bar_brightness"
+                app:layoutManager="LinearLayoutManager"
+                tools:context="com.sdpdigital.glassblockbar.LEDFunctionListActivity"
+                tools:listitem="@layout/item_list_content" />
+
+            <com.sdpdigital.glassblockbar.view.VerticalSeekBar
+                style="@style/Theme.VerticalGlassBlockSeekBar"
+                android:id="@id/seek_bar_brightness"
+                android:layout_width="wrap_content"
+                android:layout_height="300dp"
+                android:layout_centerHorizontal="true"
+                android:layout_above="@+id/brightness_text_view"
+                android:layout_marginTop="@dimen/medium_margin"
+                android:layout_marginBottom="@dimen/medium_margin"
+                android:max="255"/>
+
+            <TextView
+                android:id="@id/brightness_text_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/medium_margin"
+                android:layout_centerHorizontal="true"
+                android:layout_alignParentBottom="true"
+                android:gravity="center"
+                android:textSize="@dimen/body_text_size"
+                android:text="Brightness"/>
+
+        </RelativeLayout>
+
+    </RelativeLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

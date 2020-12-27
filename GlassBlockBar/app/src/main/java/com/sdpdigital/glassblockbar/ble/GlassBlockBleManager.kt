@@ -17,10 +17,8 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
     // Characteristic for writing value for all the glass blocks
     private var argbCharacteristic: BluetoothGattCharacteristic? = null
     private var lowMidHighCharacteristic: BluetoothGattCharacteristic? = null
-    private var equalizerCharacteristic: BluetoothGattCharacteristic? = null
+    private var bpmCharacteristic: BluetoothGattCharacteristic? = null
     private var equalizerLongCharacteristic: BluetoothGattCharacteristic? = null
-    private var functionCharacteristic: BluetoothGattCharacteristic? = null
-    private var brightnessCharacteristic: BluetoothGattCharacteristic? = null
 
     override fun getGattCallback(): BleManagerGattCallback {
         return MyManagerGattCallback()
@@ -78,13 +76,13 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
                 .enqueue()
     }
 
-    public fun writeBitshiftEqualizer(eqBytes: ByteArray) {
-        val debug = eqBytes.map { "$it, " }
-        Log.d("EQ_DEBUG", "Eq sending $debug")
+    public fun writeBpmInfo(bpmBytes: ByteArray) {
+//        val debug = eqBytes.map { "$it, " }
+//        Log.d("EQ_DEBUG", "Eq sending $debug")
         // We do not want any commands queueing up
         cancelQueue()
         // You may easily enqueue more operations here like such:
-        writeCharacteristic(equalizerCharacteristic, eqBytes)
+        writeCharacteristic(bpmCharacteristic, bpmBytes)
                 .done { device: BluetoothDevice? ->
                     //Log.d("EQ_DEBUG", "Eq sent $debug")
                 }
@@ -105,13 +103,13 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
             if (service != null) {
                 argbCharacteristic = service.getCharacteristic(ARGB_CHAR)
                 lowMidHighCharacteristic = service.getCharacteristic(LMH_CHAR)
-                equalizerCharacteristic = service.getCharacteristic(EQ_CHAR)
+                bpmCharacteristic = service.getCharacteristic(BPM_CHAR)
                 equalizerLongCharacteristic = service.getCharacteristic(EQ_LONG_CHAR)
             }
             // Return true if all required services have been found
             return argbCharacteristic != null &&
                     lowMidHighCharacteristic != null &&
-                    equalizerCharacteristic != null &&
+                    bpmCharacteristic != null &&
                     equalizerLongCharacteristic != null // Allow connection even if some characteristics are missing
         }
 
@@ -166,10 +164,8 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
             // Device disconnected. Release your references here.
             argbCharacteristic = null
             lowMidHighCharacteristic = null
-            equalizerCharacteristic = null
+            bpmCharacteristic = null
             equalizerLongCharacteristic = null
-            functionCharacteristic = null
-            brightnessCharacteristic = null
         }
     }
 
@@ -189,7 +185,7 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
             UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
         val LMH_CHAR =
                 UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e")
-        val EQ_CHAR =
+        val BPM_CHAR =
                 UUID.fromString("6e400004-b5a3-f393-e0a9-e50e24dcca9e")
         val EQ_LONG_CHAR =
                 UUID.fromString("6e400005-b5a3-f393-e0a9-e50e24dcca9e")

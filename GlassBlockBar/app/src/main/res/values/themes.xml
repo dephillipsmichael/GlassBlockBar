@@ -25,4 +25,10 @@
         <item name="android:padding">@dimen/medium_margin</item>
     </style>
 
+    <style name="Theme.VerticalGlassBlockSeekBar" parent="Widget.AppCompat.SeekBar">
+        <item name="android:thumb">@drawable/glass_block_thumb</item>
+        <item name="android:thumbOffset">54px</item>
+        <item name="android:progressDrawable">@drawable/view_seekbar_progress</item>
+    </style>
+
 </resources>

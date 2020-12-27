@@ -38,8 +38,8 @@ class GlassBlockBarViewModel(application: Application) : AndroidViewModel(applic
         glassBlockManager.writeLowMidHighBeats(lowMidHigh)
     }
 
-    public fun sendBitshiftEqualizer(eqValues: ByteArray) {
-        glassBlockManager.writeBitshiftEqualizer(eqValues)
+    public fun sendBpmInfo(bpmValues: ByteArray) {
+        glassBlockManager.writeBpmInfo(bpmValues)
     }
 
     public fun sendEqualizer(eqValues: ByteArray) {

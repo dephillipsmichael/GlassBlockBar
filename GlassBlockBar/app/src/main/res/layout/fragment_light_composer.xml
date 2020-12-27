@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/item_detail_root_layout"
+    style="?android:attr/textAppearanceLarge"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="@dimen/medium_margin">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="360dp"
+        android:orientation="horizontal">
+
+        <RelativeLayout
+            android:layout_width="360dp"
+            android:layout_height="match_parent"
+            android:padding="@dimen/medium_margin">
+
+            <ImageButton
+                android:id="@+id/bpm_button"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/glass_block_big"
+                android:layout_above="@+id/bpm_reset_button"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="Tap to set\nBPM"
+                android:textSize="@dimen/title_text_size"
+                android:gravity="center"
+                android:layout_above="@id/bpm_reset_button"/>
+
+            <Button
+                android:id="@id/bpm_reset_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Reset"
+                android:textSize="@dimen/title_text_size"
+                android:layout_alignParentBottom="true"/>
+
+        </RelativeLayout>
+
+        <LinearLayout
+            android:layout_width="360dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="@dimen/medium_margin">
+
+            <TextView
+                android:id="@+id/bpm_fine_tune_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="0 BPM"
+                android:textSize="@dimen/title_text_size"
+                android:padding="@dimen/medium_margin"/>
+
+            <androidx.appcompat.widget.AppCompatSeekBar
+                style="@style/Theme.GlassBlockSeekBar"
+                android:id="@+id/seek_bar_bpm_fine_tune"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="200"/>
+
+            <TextView
+                android:id="@+id/bpm_delay_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="0 ms BPM delay"
+                android:textSize="@dimen/title_text_size"
+                android:padding="@dimen/medium_margin"/>
+
+            <androidx.appcompat.widget.AppCompatSeekBar
+                style="@style/Theme.GlassBlockSeekBar"
+                android:id="@+id/seek_bar_bpm_delay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="500"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

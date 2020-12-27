@@ -9,7 +9,7 @@
     android:layout_height="match_parent"
     android:padding="16dp"
     android:orientation="vertical"
-    tools:context=".ColorPickerFragment" >
+    tools:context=".AnimationPickerFragment" >
 
     <LinearLayout
         android:id="@+id/beat_indicator_root"
@@ -17,7 +17,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        tools:context=".ColorPickerFragment" >
+        tools:context=".AnimationPickerFragment" >
 
         <View
             android:id="@+id/low_beat_view"
