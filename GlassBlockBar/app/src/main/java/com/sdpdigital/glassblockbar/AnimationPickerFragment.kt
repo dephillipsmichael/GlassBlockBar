@@ -165,19 +165,6 @@ class AnimationPickerFragment : Fragment() {
         app?.let {
             val factory = AppViewModelFactory(it)
             glassBlockViewModel = ViewModelProvider(it, factory).get(GlassBlockBarViewModel::class.java)
-            // Connection state observer
-            val connectionObserver = Observer<ConnectionState> { connectionState  ->
-                // Update the UI, in this case, a TextView.
-                when(connectionState) {
-                    ConnectionState.Disconnecting -> {
-                        // TODO: go back to connection screen
-                    }
-                    else -> {
-                        // no-op
-                    }
-                }
-            }
-            glassBlockViewModel?.connectionState?.observe(viewLifecycleOwner, connectionObserver)
         }
     }
 }

@@ -20,28 +20,87 @@
             android:layout_height="match_parent"
             android:padding="@dimen/medium_margin">
 
-            <ImageButton
-                android:id="@+id/bpm_button"
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tab_layout_beats_per_measure"
+                android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:layout_alignParentTop="true">
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_height="match_parent"
+                    android:layout_width="wrap_content"
+                    android:text="4/4"/>
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_height="match_parent"
+                    android:layout_width="wrap_content"
+                    android:text="8/8"/>
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_height="match_parent"
+                    android:layout_width="wrap_content"
+                    android:text="16/16" />
+
+            </com.google.android.material.tabs.TabLayout>
+            
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:src="@drawable/glass_block_big"
-                android:layout_above="@+id/bpm_reset_button"/>
+                android:layout_below="@id/tab_layout_beats_per_measure"
+                android:layout_above="@+id/bpm_reset_button_container"
+                android:padding="@dimen/medium_margin"
+                android:orientation="horizontal"
+                android:weightSum="2">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:text="Tap to set\nBPM"
-                android:textSize="@dimen/title_text_size"
-                android:gravity="center"
-                android:layout_above="@id/bpm_reset_button"/>
+                <ImageButton
+                    android:id="@+id/bpm_left_button"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/glass_block_big"
+                    android:scaleType="centerInside"
+                    android:layout_weight="1"
+                    android:layout_margin="4dp"
+                    android:background="?selectableItemBackgroundBorderless" />
 
-            <Button
-                android:id="@id/bpm_reset_button"
+                <ImageButton
+                    android:id="@+id/bpm_right_button"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/glass_block_big"
+                    android:scaleType="centerInside"
+                    android:layout_weight="1"
+                    android:layout_margin="4dp"
+                    android:background="?selectableItemBackgroundBorderless"/>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@id/bpm_reset_button_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Reset"
-                android:textSize="@dimen/title_text_size"
-                android:layout_alignParentBottom="true"/>
+                android:orientation="horizontal"
+                android:weightSum="2"
+                android:layout_alignParentBottom="true">
+
+                <Button
+                    android:id="@+id/bpm_reset_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Reset"
+                    android:textSize="@dimen/title_text_size"
+                    android:layout_weight="1"
+                    android:background="?selectableItemBackgroundBorderless"/>
+
+                <Button
+                    android:id="@+id/bpm_recalibrate_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Send BPM"
+                    android:textSize="@dimen/title_text_size"
+                    android:layout_weight="1"
+                    android:background="?selectableItemBackgroundBorderless"/>
+
+            </LinearLayout>
 
         </RelativeLayout>
 
@@ -79,10 +138,18 @@
                 android:id="@+id/seek_bar_bpm_delay"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:max="500"/>
+                android:max="100"/>
 
         </LinearLayout>
 
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/bpm_indicator_text"
+        android:layout_width="360dp"
+        android:layout_height="wrap_content"
+        android:text="-"
+        android:textSize="@dimen/title_text_size"
+        android:padding="@dimen/medium_margin"/>
 
 </LinearLayout>

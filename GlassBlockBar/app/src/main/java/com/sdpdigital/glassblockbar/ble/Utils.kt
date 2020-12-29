@@ -27,11 +27,13 @@ import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.SystemClock
 import android.preference.PreferenceManager
 import android.provider.Settings
 import android.provider.Settings.SettingNotFoundException
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import kotlin.math.round
 
 object Utils {
     private const val PREFS_LOCATION_NOT_REQUIRED = "location_not_required"
@@ -135,6 +137,9 @@ object Utils {
         preferences.edit().putBoolean(PREFS_PERMISSION_REQUESTED, true).apply()
     }
 
+    val isMarshmallowOrAbove: Boolean
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+
     fun convertEqBytesToMinimalBytes(eqBytes: Array<Int>): Array<Int> {
         var retValBytes = Array(4) { 0 }
         val oneDigit = 1 // 001 in binary
@@ -169,6 +174,76 @@ object Utils {
         return retValBytes
     }
 
-    val isMarshmallowOrAbove: Boolean
-        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+    // One minute in milliseconds
+    const private val perMinuteMillis = (1000L * 60L).toDouble()
+    // One minute in microseconds
+    const private val perMinuteMicros = 60000000.00
+    const private val beatDivisionFactor24 = 24
+    const private val one24thBeat = 1.0 / beatDivisionFactor24.toDouble()
+
+    /**
+     * @param timeInMicros of current beat
+     * @param bpm beats per minute
+     * @param bpmStartTimeMicros start time of bpm counting in microseconds
+     * @return the number of 24th beats in long format
+     */
+    fun syncToNearest24thBeat(timeInMicros: Long, bpm: Int, bpmStartTimeMicros: Long): Long {
+        val numberOfBeats = beatsElapsed(timeInMicros, bpm, bpmStartTimeMicros)
+        val numberOf24thBeats = numberOfBeats / one24thBeat
+        return round(numberOf24thBeats).toLong()
+    }
+
+    /**
+     * @param timeInMicros of current beat
+     * @param bpm beats per minute
+     * @param bpmStartTimeMicros start time of bpm counting in microseconds
+     * @return the timestamp in microseconds of the time synced to closest 24th beat
+     */
+    fun syncToNearest24thBeatMicros(timeInMicros: Long, bpm: Int, bpmStartTimeMicros: Long): Double {
+        val roundedNumberOf24thBeats =  syncToNearest24thBeat(timeInMicros, bpm, bpmStartTimeMicros)
+        val roundedNumberOfBeats = roundedNumberOf24thBeats.toDouble() / beatDivisionFactor24.toDouble()
+        return roundedNumberOfBeats * microsInBeat(bpm)
+    }
+
+    /**
+     * @param timeInMicros of current beat
+     * @param bpm beats per minute
+     * @param bpmStartTimeMicros start time of bpm counting in microseconds
+     * @return the whole and fractional number of beats in double format
+     */
+    fun beatsElapsed(timeInMicros: Long, bpm: Int, bpmStartTimeMicros: Long): Double {
+        return (timeInMicros - bpmStartTimeMicros) / microsInBeat(bpm)
+    }
+
+    /**
+     * @param bpm beats per minute
+     * @return number of milliseconds in a beat in double precision
+     */
+    fun microsInBeat(bpm: Int): Double {
+        return perMinuteMicros / bpm
+    }
+
+    /**
+     * @return the bpm value in decimal precision
+     */
+    fun bpmFractional(microsInBeat: Long): Double {
+        return perMinuteMicros / microsInBeat
+    }
+
+    /**
+     * @return the bpm value rounded to a whole number
+     */
+    fun bpm(microsInBeat: Double): Int {
+        return round(perMinuteMicros / microsInBeat).toInt()
+    }
+
+//    BPM = 60,000,000 / MicroPerBeat
+//    MicrosPerPPQN = MicrosPerBeat / TimeBase
+//    MicrosPerMIDIClock = MicrosPerBeat / 24
+//
+//    PPQNPerMIDIClock = TimeBase / 24
+//    MicrosPerSubFrame = 1000000 * Frames * SubFrames
+//    SubFramesPerQuarterNote = MicrosPerBeat / (Frames * SubFrames)
+//    SubFramesPerPPQN = SubFramesPerQuarterNote/TimeBase
+//    MicrosPerPPQN = SubFramesPerPPQN * Frames * SubFrames
 }
