@@ -54,7 +54,6 @@ class EqualizerFragment : Fragment() {
     var maxIntensityRefreshTime = 3000 // 2 seconds
     var nextMaxFrameIntensities = Array(EQ_COLS) { 0.0 } // Initialize all to 0
 
-    // Glass Blocks only get 80 fps, so only update at about 30 fps
     var lastFpsTime = System.currentTimeMillis()
     var frameTimeInMillis = 1000f / 20f
     var forceBeatSend = false

@@ -1,6 +1,7 @@
 package com.sdpdigital.glassblockbar
 
 import com.sdpdigital.glassblockbar.ble.Utils
+import com.sdpdigital.glassblockbar.viewmodel.TimeSignatureEnum
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import kotlin.math.round
@@ -28,6 +29,29 @@ class LightComposerUtilUnitTest {
             arrayOf(1, 0, 1, 1, 1, 1, 2, 2, 5, 0, 0, 0))
 
     @Test
+    fun syncToNearest24thBeatThroughMeasure4_4_Test() {
+        // Check within 9 decimal places
+        val delta9Dec = .000000001
+        val bpmStartTimeMicros = 0L
+        val timeSig = TimeSignatureEnum.FOUR_FOUR.value
+        for (bpmAndMicros in syncTo24thTests) {
+            // StartTime of 0
+            val endOfMeasure1 = bpmAndMicros[1] * 4
+            val bpm = bpmAndMicros[0].toInt()
+            // value of the first measure
+            val microsOfHalfQuarterBeat = (bpmAndMicros[3] + endOfMeasure1).toLong()
+            val actual24thBeatRoundDown = Utils.quantizeBeatWithinMeasureTo(
+                    Utils.BeatDivision.TWENTY_FOURTH, timeSig,
+                    microsOfHalfQuarterBeat, bpm, bpmStartTimeMicros)
+            assertEquals(0, actual24thBeatRoundDown)
+            val actual24thBeatRoundUp = Utils.quantizeBeatWithinMeasureTo(
+                    Utils.BeatDivision.TWENTY_FOURTH, timeSig,
+                    microsOfHalfQuarterBeat + 2L, bpm, bpmStartTimeMicros)
+            assertEquals(1, actual24thBeatRoundUp)
+        }
+    }
+
+    @Test
     fun syncToNearest24thBeatMicros_Test() {
         // Check within 9 decimal places
         val delta9Dec = .000000001
@@ -36,11 +60,11 @@ class LightComposerUtilUnitTest {
             // StartTime of 0
             val bpm = bpmAndMicros[0].toInt()
             val microsOfHalfQuarterBeat = bpmAndMicros[3].toLong()
-            val actual24thBeatRoundDown = Utils
-                .syncToNearest24thBeatMicros(microsOfHalfQuarterBeat, bpm, bpmStartTimeMicros)
+            val actual24thBeatRoundDown = Utils.quantizeBeatToInMicros(
+                    Utils.BeatDivision.TWENTY_FOURTH, microsOfHalfQuarterBeat, bpm, bpmStartTimeMicros)
             assertEquals(0.0, actual24thBeatRoundDown, delta9Dec)
-            val actual24thBeatRoundUp = Utils
-                .syncToNearest24thBeatMicros(microsOfHalfQuarterBeat + 1L, bpm, bpmStartTimeMicros)
+            val actual24thBeatRoundUp = Utils.quantizeBeatToInMicros(
+                    Utils.BeatDivision.TWENTY_FOURTH, microsOfHalfQuarterBeat + 2L, bpm, bpmStartTimeMicros)
             assertEquals(bpmAndMicros[2], actual24thBeatRoundUp, delta9Dec)
         }
     }
@@ -52,11 +76,11 @@ class LightComposerUtilUnitTest {
             // StartTime of 0
             val bpm = bpmAndMicros[0].toInt()
             val microsOfHalfQuarterBeat = bpmAndMicros[3].toLong()
-            val actual24thBeatRoundDown = Utils
-                .syncToNearest24thBeat(microsOfHalfQuarterBeat, bpm, bpmStartTimeMicros)
+            val actual24thBeatRoundDown = Utils.quantizeBeatTo(
+                    Utils.BeatDivision.TWENTY_FOURTH, microsOfHalfQuarterBeat, bpm, bpmStartTimeMicros)
             assertEquals(0, actual24thBeatRoundDown)
-            val actual24thBeatRoundUp = Utils
-                .syncToNearest24thBeat(microsOfHalfQuarterBeat + 1L, bpm, bpmStartTimeMicros)
+            val actual24thBeatRoundUp = Utils.quantizeBeatTo(
+                    Utils.BeatDivision.TWENTY_FOURTH, microsOfHalfQuarterBeat + 2L, bpm, bpmStartTimeMicros)
             assertEquals(1, actual24thBeatRoundUp)
         }
     }

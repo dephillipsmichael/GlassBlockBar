@@ -6,18 +6,22 @@ import android.os.Handler
 import android.os.SystemClock
 import android.util.Log
 import android.view.LayoutInflater
-import android.view.MotionEvent.*
+import android.view.MotionEvent.ACTION_DOWN
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.Button
+import android.widget.ImageButton
+import android.widget.SeekBar
+import android.widget.TextView
 import androidx.appcompat.widget.AppCompatSeekBar
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.*
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.tabs.TabLayout
 import com.sdpdigital.glassblockbar.ble.Utils
+import com.sdpdigital.glassblockbar.view.BeatSequenceView
 import com.sdpdigital.glassblockbar.viewmodel.*
 import kotlin.math.round
-
 
 /**
  * A fragment that allows the user to choose a color from the color wheel
@@ -43,11 +47,13 @@ class LightComposerFragment : Fragment() {
     var bpmRecalibrateButton: Button? = null
     var timeSignatureTabs: TabLayout? = null
     var bpmIndicatorTextView: TextView? = null
+    var addBeatSequenceButton: Button? = null
+    var beatSequenceView: BeatSequenceView? = null
 
     // BPM Seek Bar Range
     private val bpmRange = 20
     // Each beat is divided into 24 equal pieces, see MIDI protocol for more info
-    private val beatDivision = 24
+    private val beatUnit = Utils.BeatDivision.TWENTY_FOURTH
 
     private val timeSigs = arrayOf(
             TimeSignatureEnum.FOUR_FOUR,
@@ -174,6 +180,41 @@ class LightComposerFragment : Fragment() {
 
         bpmIndicatorTextView = rootView.findViewById(R.id.bpm_indicator_text)
 
+        addBeatSequenceButton = rootView.findViewById(R.id.button_add_beat_sequence)
+        addBeatSequenceButton?.setOnTouchListener { _, event ->
+            event?.let {
+                if (it.action == ACTION_DOWN) {
+                    addBeatToSequence(it.eventTime)
+                }
+            }
+            return@setOnTouchListener true
+        }
+
+        rootView.findViewById<Button>(R.id.button_clear_beat_sequence)?.setOnClickListener {
+            clearBeatSequence()
+        }
+        rootView.findViewById<Button>(R.id.button_undo_beat_sequence)?.setOnClickListener {
+            beatSequenceView?.undoLastBeatSequence()
+        }
+
+        beatSequenceView = rootView.findViewById(R.id.beat_sequence_view)
+
+        val quantizeLayout = rootView.findViewById<TabLayout>(R.id.tab_sync_per_beat_fraction)
+        val startingTabIdx = Utils.BeatDivision.values().indexOf(Utils.BeatDivision.SIXTEENTH)
+        quantizeLayout.getTabAt(startingTabIdx)?.select()
+        quantizeLayout?.addOnTabSelectedListener(
+                object : TabLayout.OnTabSelectedListener {
+            override fun onTabReselected(tab: TabLayout.Tab?) { /** No-op */ }
+            override fun onTabUnselected(tab: TabLayout.Tab?) { /** No-op */ }
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                tab?.position?.let {
+                    beatSequenceView?.quantizationUnit = Utils.BeatDivision.values()[it]
+                } ?: run {
+                    val tag = tab?.tag
+                    Log.e(LOG_TAG,"Error processing sync tab $tag")
+                }
+            }
+        })
 
         // Data setup
 
@@ -255,6 +296,8 @@ class LightComposerFragment : Fragment() {
             bpmFineTuneSeekBar?.max = it.bpmRangeEnd - it.bpmRangeStart
             bpmFineTuneSeekBar?.progress = bpm - it.bpmRangeStart
         }
+        beatSequenceView?.bpmInfo = bpmInfo
+        addBeatSequenceButton?.isEnabled = bpm > 0
     }
 
     private fun refreshBeatIndicatorTextAndScheduleRunnable() {
@@ -267,27 +310,35 @@ class LightComposerFragment : Fragment() {
                 val beatRemainder = beatsElapsed - beatsElapsed.toInt()
 
                 // Check beats through the measure
-                val beatsPerMeasure = (currentTimeSig() ?: TimeSignatureEnum.FOUR_FOUR.value).beatsPerMeasure
-                val beatThroughMeasure = ((beatsElapsed % beatsPerMeasure) + 1).toInt()
+                val timeSig = (currentTimeSig() ?: TimeSignatureEnum.FOUR_FOUR.value)
+                val beatNumThroughMeasure =
+                        Utils.beatsThroughMeasure(timeSig, beatsElapsed).toInt() + 1
 
                 var indicatorText = ""
-                for (i in 1 until beatThroughMeasure) {
+                for (i in 1 until beatNumThroughMeasure) {
                     indicatorText += "$i . "
                     if (i % 4 == 0) { indicatorText += "\n" } // move to next line
                 }
-                indicatorText += "$beatThroughMeasure "
+                indicatorText += "$beatNumThroughMeasure "
                 if (beatRemainder >= 0.5) {
                     indicatorText += ". "
                 }
                 bpmIndicatorTextView?.text = indicatorText
 
-                val millisInBeat = Utils.microsInBeat(bpm) / 1000.0
-                val nextHalfBeat = startTime + if (beatRemainder >= 0.5) {
-                    (millisInBeat * (beatsElapsed.toInt() + 1)).toLong()
-                } else {
-                    (millisInBeat * (beatsElapsed.toInt() + 0.5)).toLong()
+                currentTimeSig()?.let {
+                    val current24thBeatInMeasure = Utils.quantizeBeatWithinMeasureTo(
+                            beatUnit, it, nowMicros, bpm, startTimeMicros)
+                    beatSequenceView?.setCurrentBeat(current24thBeatInMeasure)
                 }
-                mainHandler.postDelayed(bpmIndicatorRunnable, nextHalfBeat - SystemClock.uptimeMillis())
+
+                // Compute the delay to wait until next 24th beat
+                val current24thMillis = (startTimeMicros +
+                        Utils.quantizeBeatToInMicros(beatUnit, nowMicros, bpm, startTimeMicros)) / 1000.0
+                val a24thBeatInMillis = (Utils.microsInBeat(bpm) / Utils.BeatDivision.TWENTY_FOURTH.divisor) / 1000.0
+                val nextBeatTimeInMillis = current24thMillis + a24thBeatInMillis
+                val delay = round(nextBeatTimeInMillis - SystemClock.uptimeMillis()).toLong()
+
+                mainHandler.postDelayed(bpmIndicatorRunnable, delay)
             }
         }
     }
@@ -296,6 +347,14 @@ class LightComposerFragment : Fragment() {
         lastTapTime = null
         sum = 0L
         tapCount = 0
+    }
+
+    private fun clearBeatSequence() {
+        beatSequenceView?.clearBeatSequence()
+    }
+
+    private fun addBeatToSequence(beatTimeInMs: Long) {
+        beatSequenceView?.addBeat(beatTimeInMs)
     }
 
     private fun setBpmToSeekBar(startTime: Long) {

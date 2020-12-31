@@ -1,24 +1,3 @@
-/*
- * Copyright (c) 2018, Nordic Semiconductor
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the
- * documentation and/or other materials provided with the distribution.
- *
- * 3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
- * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
- * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
 package com.sdpdigital.glassblockbar.ble
 
 import android.Manifest
@@ -27,15 +6,17 @@ import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.os.SystemClock
 import android.preference.PreferenceManager
 import android.provider.Settings
 import android.provider.Settings.SettingNotFoundException
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.sdpdigital.glassblockbar.viewmodel.TimeSignature
 import kotlin.math.round
 
 object Utils {
+    private val LOG_TAG: String? = (Utils::class.java).simpleName
+
     private const val PREFS_LOCATION_NOT_REQUIRED = "location_not_required"
     private const val PREFS_PERMISSION_REQUESTED = "permission_requested"
 
@@ -178,31 +159,80 @@ object Utils {
     const private val perMinuteMillis = (1000L * 60L).toDouble()
     // One minute in microseconds
     const private val perMinuteMicros = 60000000.00
-    const private val beatDivisionFactor24 = 24
-    const private val one24thBeat = 1.0 / beatDivisionFactor24.toDouble()
 
     /**
+     * Beat division is a way to divide beats by factors common in musical notes
+     * 24 is used as the transmit protocol for BLE, for the same reasons that
+     * MIDI protocol chose 24 as the beat division.
+     * Its the minimal division that works with all time signatures and triplet notes.
+     *
+     * The rest of them are used to quantize music in more common (4/4) patterns.
+     */
+    public enum class BeatDivision(val divisor: Int) {
+        FOURTH(        4),
+        EIGHTH(        8),
+        SIXTEENTH(    16),
+        TWENTY_FOURTH(24);
+
+        val one: Double get() {
+            return 1.0 / divisor.toDouble()
+        }
+    }
+
+    fun isWholeBeat24th(beatNum: Int): Boolean {
+        return beatNum % 24 == 0
+    }
+
+    fun isHalfBeat24th(beatNum: Int): Boolean {
+        return beatNum % 12 == 0
+    }
+
+    fun isQuarterBeat24th(beatNum: Int): Boolean {
+        return beatNum % 6 == 0
+    }
+
+    /**
+     * @param division the divisional unit of the beat
      * @param timeInMicros of current beat
      * @param bpm beats per minute
      * @param bpmStartTimeMicros start time of bpm counting in microseconds
      * @return the number of 24th beats in long format
      */
-    fun syncToNearest24thBeat(timeInMicros: Long, bpm: Int, bpmStartTimeMicros: Long): Long {
+    fun quantizeBeatTo(division: BeatDivision, timeInMicros: Long, bpm: Int, bpmStartTimeMicros: Long): Long {
         val numberOfBeats = beatsElapsed(timeInMicros, bpm, bpmStartTimeMicros)
-        val numberOf24thBeats = numberOfBeats / one24thBeat
-        return round(numberOf24thBeats).toLong()
+        val numberOfDivisionalBeats = numberOfBeats / division.one
+        return round(numberOfDivisionalBeats).toLong()
     }
 
     /**
+     * @param division the divisional unit of the beat
      * @param timeInMicros of current beat
      * @param bpm beats per minute
      * @param bpmStartTimeMicros start time of bpm counting in microseconds
      * @return the timestamp in microseconds of the time synced to closest 24th beat
      */
-    fun syncToNearest24thBeatMicros(timeInMicros: Long, bpm: Int, bpmStartTimeMicros: Long): Double {
-        val roundedNumberOf24thBeats =  syncToNearest24thBeat(timeInMicros, bpm, bpmStartTimeMicros)
-        val roundedNumberOfBeats = roundedNumberOf24thBeats.toDouble() / beatDivisionFactor24.toDouble()
+    fun quantizeBeatToInMicros(division: BeatDivision, timeInMicros: Long, bpm: Int, bpmStartTimeMicros: Long): Double {
+        val roundedNumberOfDivisionalBeats =
+                quantizeBeatTo(division, timeInMicros, bpm, bpmStartTimeMicros)
+        val roundedNumberOfBeats =
+                roundedNumberOfDivisionalBeats.toDouble() / division.divisor.toDouble()
         return roundedNumberOfBeats * microsInBeat(bpm)
+    }
+
+    /**
+     * @param division the divisional unit of the beat
+     * @param timeInMicros of current beat
+     * @param bpm beats per minute
+     * @param bpmStartTimeMicros start time of bpm counting in microseconds
+     * @return the number of 24th beats through the current measure that the time is rounded to
+     */
+    fun quantizeBeatWithinMeasureTo(division: BeatDivision, timeSignature: TimeSignature,
+                                    timeInMicros: Long, bpm: Int, bpmStartTimeMicros: Long): Int {
+
+        val beatsElapsed = beatsElapsed(timeInMicros, bpm, bpmStartTimeMicros)
+        val beatsThroughMeasure = beatsThroughMeasure(timeSignature, beatsElapsed)
+        val numberOfDivisionalBeats = beatsThroughMeasure / division.one
+        return round(numberOfDivisionalBeats).toInt()
     }
 
     /**
@@ -213,6 +243,15 @@ object Utils {
      */
     fun beatsElapsed(timeInMicros: Long, bpm: Int, bpmStartTimeMicros: Long): Double {
         return (timeInMicros - bpmStartTimeMicros) / microsInBeat(bpm)
+    }
+
+    /**
+     * @param timeSignature with valid beats per measure
+     * @param beatsElapsed results of beatsElapsed function
+     * @return the number of beats through the current measure
+     */
+    fun beatsThroughMeasure(timeSignature: TimeSignature, beatsElapsed: Double): Double {
+        return beatsElapsed % timeSignature.beatsPerMeasure
     }
 
     /**
@@ -237,13 +276,202 @@ object Utils {
         return round(perMinuteMicros / microsInBeat).toInt()
     }
 
-//    BPM = 60,000,000 / MicroPerBeat
-//    MicrosPerPPQN = MicrosPerBeat / TimeBase
-//    MicrosPerMIDIClock = MicrosPerBeat / 24
-//
-//    PPQNPerMIDIClock = TimeBase / 24
-//    MicrosPerSubFrame = 1000000 * Frames * SubFrames
-//    SubFramesPerQuarterNote = MicrosPerBeat / (Frames * SubFrames)
-//    SubFramesPerPPQN = SubFramesPerQuarterNote/TimeBase
-//    MicrosPerPPQN = SubFramesPerPPQN * Frames * SubFrames
+    // Beat measure characteristic data length
+    const val beatMeasueDataLength = 20
+    // Start command byte
+    const val startSequenceByte = 1
+    // Append part to previous sequence messages
+    const val appendSequenceByte = 2
+
+    /**
+     * To efficiently send quantized beat sequences through BLE,
+     * we quantize all user taps to within a 24th beat in the loop (like MIDI).
+     * A loop is a musical measure in the specified time signature.
+     *
+     * Each byte value between the start and end commands
+     * represents a 24th beat, and the actual
+     * time in milliseconds these represent is computed by the receiver
+     * using BPM, BPM time offset, and time signature.
+     *
+     * The beat sequence message format is as follows:
+     * [startSequenceByte][animation_index = AI in these examples]
+     * [0 if starting on a beat, or 24th beats to first beat]
+     * [distance in 24th beats from first beat to second beat]
+     * [distance in 24th beats from first beat to second beat...
+     * but 255 if distance > 255 (10x 24th beats), and next byte is added to 255]
+     * [endSequenceByte]
+     *
+     * Take a simple example of 4/4 with the user tapping on the beat, the sequence would be:
+     * [1][AI]][0][24][24][24]
+     *
+     * Take a more complicated example of 16/16 with the user tapping
+     * on only the last beat (15/16) in the measure:
+     * [1][AI][255][105]
+     * Here we had to split the tap into 2 bytes as there is 360 24th beats
+     * to the 15/16th beat in the measure, and a byte only has 255 values.
+     *
+     * Take an even more complicated example of when we need to split the message into
+     * multiple ByteArrays, due to the limitation in BLE MTU size matching characteristic size.
+     * Say we want to send a measure with beats every 16th note in a 16/16 time signature.
+     * The byte sequence would look like this:
+     * [1][AI][0][6][6][6][6][6][6][6][6][6][6][6][6][6][6][6][6][6]
+     * [2][AI][6][6][6][6][6][6][6][6][6][6][6][6][6][6][6][6][6][6]
+     * [2][AI][6][6][6][6][6][6][6][6][6][6][6][6][6][6][6][6][6][6]
+     * [2][AI][6][6][6][6][6][6][6][6][6][6]
+     *
+     * Take an even EVEN more complicated example of when we need to split the message into
+     * multiple ByteArrays, with the first array ending on 255.  17 32nd notes and then a long rest.
+     * The byte sequence would look like this:
+     * [1][AI][0][3][3][3][3][3][3][3][3][3][3][3][3][3][3][3][3][255]
+     * [2][AI][0][0][0][0][0][0][0][0][0][0][0][0][0][0][0][0][0][0]
+     *
+     * This takes 4 messages to send that sequence.
+     * See these examples as Unit Tests in BleUtilUnitTest.encodeMeasureOfQuantizedBeats_Test()
+     *
+     * @param tapsQuantizedTo24thBeats the quantized beats, i.e. in 4/4 first beat is 0,
+     *                              second beat is 24, and last is (4 * 24) = 96.
+     * @return messages ready to send over BLE to describe a beat sequence
+     */
+    fun encodeMeasureOfQuantizedBeats(animationIndex: Int, tapsQuantizedTo24thBeats: List<Int>): List<IntArray> {
+        val msgList = ArrayList<IntArray>()
+        val msg = ArrayList<Int>()
+
+        var addToMsg : (Int) -> Unit = { toAdd: Int ->
+            if (msg.size >= beatMeasueDataLength) {
+                msgList.add(msg.toIntArray())
+                msg.clear()
+                msg.add(appendSequenceByte)
+                msg.add(animationIndex)
+            }
+            msg.add(toAdd)
+        }
+
+        val sortedTaps = tapsQuantizedTo24thBeats.sorted()
+        // Beats must be sorted, low to high, to send distance to next beat
+        for ((i, beat) in sortedTaps.withIndex()) {
+            // Check for start sequence of the first message
+            if (i == 0) {
+                addToMsg(startSequenceByte)  // Always start with this to give context to following bytes
+                addToMsg(animationIndex)     // The animation this sequence should be assigned to
+            }
+            // Check for the start sequence of appending a message
+            if (msg.size == 0) {
+                addToMsg(appendSequenceByte)
+                msg.add(animationIndex)
+            }
+            // Write the difference from last tap for all steps but the first
+            var diff = if(i == 0) { beat } else { beat - sortedTaps[i-1] }
+            while (diff >= 255) {
+                addToMsg(255)
+                diff -= 255
+            }
+            if (diff >= 0 || i == 0) {
+                addToMsg(diff)
+            }
+        }
+
+        // Check if we need to end the last sequence by filling all 20 bytes
+        if (msg.size > 0) {
+            for (i in msg.size until beatMeasueDataLength) {
+                msg.add(0)
+            }
+            msgList.add(msg.toIntArray())
+        }
+        return msgList
+    }
+
+    /**
+     * This function decodes messages that are encoded like above in encodeMeasureOfQuantizedBeats.
+     * @param lastBeatVal in the current encodedMessage
+     * @param beatSequence the current beat sequence for the designated animation
+     * @param startBeatValue this is the value at which we should start counting at
+     *                       when decoding the next message
+     *
+     * @return the new beatSequence value to be used
+     */
+    fun decodeMeasureOfQuantized24thBeatsMessage(
+            encodedMessage: Array<Int>,
+            encodedMessageSize: Int,
+            beatSequence: Array<Int>,
+            beatSequenceSize: Int,
+            startBeatValue: Int): DecodedReturnValue {
+
+        // First two bytes always designate message type and the animation index
+        val messageType = encodedMessage[0]
+        val animationIndex = encodedMessage[1]
+
+        // Find the length of the beat sequence section of the message
+        // The end is signaled by a zero after the 3rd byte
+        var i = 3
+        var accurateMessageSize = 0  // set to 1 to get it to run
+        var found = false
+        var count255 = 0            // Count the number of 255 values
+        if (encodedMessage[2] == 255) {
+            count255++
+        }
+        while (!found && (i < encodedMessageSize)) {
+            // Check for end of the message, if these conditions are met
+            if (encodedMessage[i] == 0 &&
+                (encodedMessage[i -1] != 255)) {
+                accurateMessageSize = i - 2 - count255
+                found = true
+            } else if (encodedMessage[i] == 255) {
+                // Ignore 255 in the message count,
+                // because it is a continuing sum
+                count255++
+            }
+            i++
+        }
+
+        // The whole beat sequence in the message is valid
+        if (accurateMessageSize == 0) {
+            accurateMessageSize = encodedMessageSize - 2 - count255
+        }
+
+        // If we are starting the sequence, erase all previous data
+        var newBeatSequenceSize = beatSequenceSize + accurateMessageSize
+        var newLastBeatValIn24th = 0
+        i = 0
+        if (messageType == startSequenceByte) {
+            newBeatSequenceSize = accurateMessageSize
+            newLastBeatValIn24th = 0
+        }
+        // Create a new array with the new size
+        var newBeatSequence = Array(newBeatSequenceSize) { 0 }
+        // Fill up the array, depending on the messageType
+        if (messageType == appendSequenceByte) {  // appendSequenceByte
+            for (copyI in 0 until beatSequenceSize) {
+                newBeatSequence[copyI] = beatSequence[copyI]
+            }
+            i = beatSequenceSize
+            newLastBeatValIn24th = startBeatValue
+        }
+
+        // Now, fill in the rest of the translated beat sequence to full time signature beat scale
+        // Skipping first 2 bytes for messageType and animationIdx
+        for (encodedIdx in 2 until (accurateMessageSize + 2 + count255)) {
+            // Always add to the running total
+            newLastBeatValIn24th += encodedMessage[encodedIdx]
+            if (i == 33) {
+                val debug = true
+            }
+            // 255 is a case where it is considered "carried over"
+            // to the next sum, and not an actual beat value
+            if (encodedMessage[encodedIdx] != 255) {
+                newBeatSequence[i] = newLastBeatValIn24th
+                i++
+            }
+        }
+
+        // In the translated arduino code, here we must...
+        // Delete old memory here in c
+        // De-reference passed in lastBeatVal here in C
+
+        return DecodedReturnValue(newBeatSequence, newBeatSequenceSize, newLastBeatValIn24th)
+    }
+
+    class DecodedReturnValue(
+            val beatSequence: Array<Int> = Array(0) { 0 },
+            val beatSequenceSize: Int = 0,
+            val startBeatValue: Int = 0)
 }

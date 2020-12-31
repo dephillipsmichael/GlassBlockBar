@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
 import android.util.Log
+import no.nordicsemi.android.ble.ConnectionPriorityRequest.CONNECTION_PRIORITY_HIGH
 import no.nordicsemi.android.ble.PhyRequest
 import no.nordicsemi.android.ble.livedata.ObservableBleManager
 import java.util.*
@@ -150,7 +151,7 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
                             "Requested PHY not supported: $status"
                         )
                     }
-                )
+                ).add(requestConnectionPriority(CONNECTION_PRIORITY_HIGH))
                 .done { device: BluetoothDevice? ->
                     log(
                         Log.INFO,

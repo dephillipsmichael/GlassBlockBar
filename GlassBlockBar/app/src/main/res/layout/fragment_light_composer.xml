@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<LinearLayout
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/item_detail_root_layout"
@@ -11,9 +11,11 @@
     android:padding="@dimen/medium_margin">
 
     <LinearLayout
+        android:id="@+id/top_container_root"
         android:layout_width="match_parent"
         android:layout_height="360dp"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:layout_alignParentTop="true">
 
         <RelativeLayout
             android:layout_width="360dp"
@@ -150,6 +152,77 @@
         android:layout_height="wrap_content"
         android:text="-"
         android:textSize="@dimen/title_text_size"
-        android:padding="@dimen/medium_margin"/>
+        android:padding="@dimen/medium_margin"
+        android:layout_below="@id/top_container_root"/>
 
-</LinearLayout>
+    <TextView
+        android:id="@+id/sync_to_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sync to "
+        android:textSize="@dimen/body_text_size"
+        android:padding="@dimen/small_margin"
+        android:layout_above="@+id/beat_sequence_view"/>
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tab_sync_per_beat_fraction"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_margin="@dimen/medium_margin"
+        android:layout_toRightOf="@id/sync_to_text"
+        android:layout_above="@id/beat_sequence_view">
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_height="match_parent"
+            android:layout_width="wrap_content"
+            android:text="1/4"/>
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_height="match_parent"
+            android:layout_width="wrap_content"
+            android:text="1/8"/>
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_height="match_parent"
+            android:layout_width="wrap_content"
+            android:text="1/16" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_height="match_parent"
+            android:layout_width="wrap_content"
+            android:text="1/24" />
+
+    </com.google.android.material.tabs.TabLayout>
+
+    <Button
+        android:id="@+id/button_undo_beat_sequence"
+        android:layout_width="200dp"
+        android:layout_height="40dp"
+        android:text="Undo"
+        android:layout_above="@+id/button_clear_beat_sequence"
+        android:layout_alignParentRight="true"/>
+
+    <Button
+        android:id="@id/button_clear_beat_sequence"
+        android:layout_width="200dp"
+        android:layout_height="40dp"
+        android:text="Clear"
+        android:layout_above="@+id/button_add_beat_sequence"
+        android:layout_alignParentRight="true"/>
+
+    <Button
+        android:id="@id/button_add_beat_sequence"
+        android:layout_width="200dp"
+        android:layout_height="120dp"
+        android:text="Add"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"/>
+
+    <com.sdpdigital.glassblockbar.view.BeatSequenceView
+        android:id="@id/beat_sequence_view"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_alignParentBottom="true"
+        android:layout_toLeftOf="@id/button_add_beat_sequence"/>
+
+</RelativeLayout>

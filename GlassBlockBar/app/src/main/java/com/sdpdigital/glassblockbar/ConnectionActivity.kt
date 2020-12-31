@@ -33,7 +33,7 @@ class ConnectionActivity : AppCompatActivity() {
 
     val mainHandler = Handler()
 
-    val SKIP_CONNECTION = true
+    val SKIP_CONNECTION = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
