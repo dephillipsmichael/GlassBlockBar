@@ -60,6 +60,9 @@ open class BeatSequenceView: View {
     // Raw user event tap translated to percent through measure
     private var beatsThroughMeasure = ArrayList<Double>()
     private var quantizedBeatSequenceIn24th = ArrayList<Int>()
+    public fun getBeatSequence(): List<Int> {
+        return quantizedBeatSequenceIn24th
+    }
 
     /**
      * Clear the beat sequence for a fresh start
@@ -123,8 +126,10 @@ open class BeatSequenceView: View {
 
     private var currentBeat = 0
     public fun setCurrentBeat(beat: Int) {
+        if (currentBeat != beat) {
+            invalidate()
+        }
         currentBeat = beat
-        invalidate()
     }
 
     private val backgroundPaint = Paint()

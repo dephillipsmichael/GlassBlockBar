@@ -46,6 +46,10 @@ class GlassBlockBarViewModel(application: Application) : AndroidViewModel(applic
         glassBlockManager.writeEqualizer(eqValues)
     }
 
+    public fun sendBeatSequence(beatSeq: ByteArray) {
+        glassBlockManager.writeBeatSequenceMessage(beatSeq)
+    }
+
     /**
      * Reconnects to previously connected device.
      * If this device was not supported, its services were cleared on disconnection, so

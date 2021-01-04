@@ -1,6 +1,7 @@
 package com.sdpdigital.glassblockbar
 
 import android.bluetooth.BluetoothDevice
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -46,6 +47,9 @@ class LEDFunctionListActivity : AppCompatActivity(), ConnectionObserver {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+
         setContentView(R.layout.activity_item_list)
 
         setupRecyclerView(findViewById(R.id.item_list))

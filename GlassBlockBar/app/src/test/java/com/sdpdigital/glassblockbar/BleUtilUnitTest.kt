@@ -67,16 +67,13 @@ class BleUtilUnitTest {
     val fourFourBeatTapsMsg = listOf(
             listOf(1, 0, 0, 24, 24, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
     val fourFourBeatTaps = listOf(
-            0,
-            1 * Utils.BeatDivision.TWENTY_FOURTH.divisor,
-            2 * Utils.BeatDivision.TWENTY_FOURTH.divisor,
-            3 * Utils.BeatDivision.TWENTY_FOURTH.divisor)
+            0, 24, 48, 72)
 
     // Last beat tapped 16/16
     val sixteenSixteenLastBeatTapMsg = listOf(
             listOf(1, 0, 255, 105, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
     val sixteenSixteenLastBeatTap = listOf(
-            15 * Utils.BeatDivision.TWENTY_FOURTH.divisor)
+            360)
 
     // Last beat tapped 16/16
     val sixteenSixteenSixteenthBeatsMsg = listOf(
@@ -84,16 +81,8 @@ class BleUtilUnitTest {
             listOf(2, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6),
             listOf(2, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6),
             listOf(2, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 0, 0, 0, 0, 0, 0, 0, 0))
-    val sixteenSixteenSixteenthBeats: List<Int> get() {
-        var retVal = ArrayList<Int>()
-        retVal.add(0) // first down beat
-        for (i in 1 until 16*24) {
-            if (i % 6 == 0) {
-                retVal.add(i) // 6 ticks of 24th a beat makes it a 16th note, if beats are a quarter note
-            }
-        }
-        return retVal
-    }
+    val sixteenSixteenSixteenthBeats = listOf(
+            0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60, 66, 72, 78, 84, 90, 96, 102, 108, 114, 120, 126, 132, 138, 144, 150, 156, 162, 168, 174, 180, 186, 192, 198, 204, 210, 216, 222, 228, 234, 240, 246, 252, 258, 264, 270, 276, 282, 288, 294, 300, 306, 312, 318, 324, 330, 336, 342, 348, 354, 360, 366, 372, 378)
 
     // 17 3nd beats and then a long rest and then a beat
     val carryOverBeatsMsg = listOf(
@@ -111,7 +100,7 @@ class BleUtilUnitTest {
     @Test
     fun encodeMeasureOfQuantizedBeats_4_4_Beats_Test() {
         val actualMsg = Utils
-                .encodeMeasureOfQuantizedBeats(0, fourFourBeatTaps)
+                .encodeBeatSequence(0, fourFourBeatTaps)
 
         var actualDecoded = Utils.DecodedReturnValue(arrayOf(), 0)
         for (i in fourFourBeatTapsMsg.indices) {
@@ -121,7 +110,7 @@ class BleUtilUnitTest {
             Assert.assertArrayEquals(actualMsg[i], encodedMessageArray)
 
             // Fill up array for decoding check
-            actualDecoded = Utils.decodeMeasureOfQuantized24thBeatsMessage(
+            actualDecoded = Utils.decodeAndAppendBeatSequence(
                     encodedMessageArray.toTypedArray(), encodedMessageArray.size,
                     actualDecoded.beatSequence, actualDecoded.beatSequenceSize, actualDecoded.startBeatValue)
         }
@@ -133,7 +122,7 @@ class BleUtilUnitTest {
     @Test
     fun encodeMeasureOfQuantizedBeats_16_16_15thBeat_Test() {
         val actualMsg = Utils
-                .encodeMeasureOfQuantizedBeats(0, sixteenSixteenLastBeatTap)
+                .encodeBeatSequence(0, sixteenSixteenLastBeatTap)
 
         var actualDecoded = Utils.DecodedReturnValue(arrayOf(), 0)
         for (i in sixteenSixteenLastBeatTapMsg.indices) {
@@ -143,7 +132,7 @@ class BleUtilUnitTest {
             Assert.assertArrayEquals(actualMsg[i], encodedMessageArray)
 
             // Fill up array for decoding check
-            actualDecoded = Utils.decodeMeasureOfQuantized24thBeatsMessage(
+            actualDecoded = Utils.decodeAndAppendBeatSequence(
                     encodedMessageArray.toTypedArray(), encodedMessageArray.size,
                     actualDecoded.beatSequence, actualDecoded.beatSequenceSize, actualDecoded.startBeatValue)
         }
@@ -156,7 +145,7 @@ class BleUtilUnitTest {
     @Test
     fun encodeMeasureOfQuantizedBeats_16_16_All16thBeats_Test() {
         val actualMsg = Utils
-                .encodeMeasureOfQuantizedBeats(0, sixteenSixteenSixteenthBeats)
+                .encodeBeatSequence(0, sixteenSixteenSixteenthBeats)
 
         var actualDecoded = Utils.DecodedReturnValue(arrayOf(), 0)
         for (i in sixteenSixteenSixteenthBeatsMsg.indices) {
@@ -166,7 +155,7 @@ class BleUtilUnitTest {
             Assert.assertArrayEquals(actualMsg[i], encodedMessageArray)
 
             // Fill up array for decoding check
-            actualDecoded = Utils.decodeMeasureOfQuantized24thBeatsMessage(
+            actualDecoded = Utils.decodeAndAppendBeatSequence(
                     encodedMessageArray.toTypedArray(), encodedMessageArray.size,
                     actualDecoded.beatSequence, actualDecoded.beatSequenceSize, actualDecoded.startBeatValue)
         }
@@ -179,7 +168,7 @@ class BleUtilUnitTest {
     @Test
     fun encodeMeasureOfQuantizedBeats_CarryOver_Beats_Test() {
         val actualMsg = Utils
-                .encodeMeasureOfQuantizedBeats(0, carryOverBeats)
+                .encodeBeatSequence(0, carryOverBeats)
 
         var actualDecoded = Utils.DecodedReturnValue(arrayOf(), 0)
         for (i in carryOverBeatsMsg.indices) {
@@ -189,7 +178,7 @@ class BleUtilUnitTest {
             Assert.assertArrayEquals(actualMsg[i], encodedMessageArray)
 
             // Fill up array for decoding check
-            actualDecoded = Utils.decodeMeasureOfQuantized24thBeatsMessage(
+            actualDecoded = Utils.decodeAndAppendBeatSequence(
                     encodedMessageArray.toTypedArray(), encodedMessageArray.size,
                     actualDecoded.beatSequence, actualDecoded.beatSequenceSize, actualDecoded.startBeatValue)
         }
@@ -201,7 +190,7 @@ class BleUtilUnitTest {
     @Test
     fun encodeMeasureOfQuantizedBeats_CarryOver2_Beats_Test() {
         val actualMsg = Utils
-                .encodeMeasureOfQuantizedBeats(0, carryOverBeats2)
+                .encodeBeatSequence(0, carryOverBeats2)
 
         var actualDecoded = Utils.DecodedReturnValue(arrayOf(), 0)
         for (i in carryOverBeats2Msg.indices) {
@@ -211,7 +200,7 @@ class BleUtilUnitTest {
             Assert.assertArrayEquals(actualMsg[i], encodedMessageArray)
 
             // Fill up array for decoding check
-            actualDecoded = Utils.decodeMeasureOfQuantized24thBeatsMessage(
+            actualDecoded = Utils.decodeAndAppendBeatSequence(
                     encodedMessageArray.toTypedArray(), encodedMessageArray.size,
                     actualDecoded.beatSequence, actualDecoded.beatSequenceSize, actualDecoded.startBeatValue)
         }

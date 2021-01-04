@@ -29,9 +29,47 @@ class LightComposerUtilUnitTest {
             arrayOf(1, 0, 1, 1, 1, 1, 2, 2, 5, 0, 0, 0))
 
     @Test
+    fun syncToNearest24thBeatThroughMeasure4_4_Truncate_Real_Data_Test() {
+        val bpmStartTimeMicros = a24thTruncateStarTimeMicros
+        val timeSig = TimeSignatureEnum.FOUR_FOUR.value
+        val bpm = a24thTruncateBpm
+        for (i in 0 until testa24thTruncateMicros.size) {
+            val actual = Utils.quantizeBeatWithinMeasureToTruncate(
+                    Utils.BeatDivision.TWENTY_FOURTH, timeSig,
+                    testa24thTruncateMicros[i], bpm, bpmStartTimeMicros)
+            assertEquals(testa24thTruncateBeats[i], actual)
+        }
+    }
+
+    @Test
+    fun syncToNearest24thBeatThroughMeasure4_4_Truncate_Test() {
+        val bpmStartTimeMicros = 0L
+        val timeSig = TimeSignatureEnum.FOUR_FOUR.value
+        for (bpmAndMicros in syncTo24thTests) {
+            // StartTime of 0
+            val endOfMeasure1 = bpmAndMicros[1] * 4
+            val bpm = bpmAndMicros[0].toInt()
+            // value of the first measure
+            val microsOfHalfQuarterBeat = (bpmAndMicros[3] + endOfMeasure1).toLong()
+            val microsOfFullQuarterBeat = (bpmAndMicros[2] + endOfMeasure1).toLong()
+            val actual24thBeatRoundDown = Utils.quantizeBeatWithinMeasureToTruncate(
+                    Utils.BeatDivision.TWENTY_FOURTH, timeSig,
+                    microsOfHalfQuarterBeat, bpm, bpmStartTimeMicros)
+            assertEquals(0, actual24thBeatRoundDown)
+            val actual24thBeatRoundUp = Utils.quantizeBeatWithinMeasureToTruncate(
+                    Utils.BeatDivision.TWENTY_FOURTH, timeSig,
+                    microsOfFullQuarterBeat - 1L, bpm, bpmStartTimeMicros)
+            assertEquals(0, actual24thBeatRoundUp)
+
+            val actual24thBeatOverFirst24th = Utils.quantizeBeatWithinMeasureToTruncate(
+                    Utils.BeatDivision.TWENTY_FOURTH, timeSig,
+                    microsOfFullQuarterBeat + 1L, bpm, bpmStartTimeMicros)
+            assertEquals(1, actual24thBeatOverFirst24th)
+        }
+    }
+
+    @Test
     fun syncToNearest24thBeatThroughMeasure4_4_Test() {
-        // Check within 9 decimal places
-        val delta9Dec = .000000001
         val bpmStartTimeMicros = 0L
         val timeSig = TimeSignatureEnum.FOUR_FOUR.value
         for (bpmAndMicros in syncTo24thTests) {
@@ -77,10 +115,10 @@ class LightComposerUtilUnitTest {
             val bpm = bpmAndMicros[0].toInt()
             val microsOfHalfQuarterBeat = bpmAndMicros[3].toLong()
             val actual24thBeatRoundDown = Utils.quantizeBeatTo(
-                    Utils.BeatDivision.TWENTY_FOURTH, microsOfHalfQuarterBeat, bpm, bpmStartTimeMicros)
+                    Utils.BeatDivision.TWENTY_FOURTH, microsOfHalfQuarterBeat - 1, bpm, bpmStartTimeMicros)
             assertEquals(0, actual24thBeatRoundDown)
             val actual24thBeatRoundUp = Utils.quantizeBeatTo(
-                    Utils.BeatDivision.TWENTY_FOURTH, microsOfHalfQuarterBeat + 2L, bpm, bpmStartTimeMicros)
+                    Utils.BeatDivision.TWENTY_FOURTH, microsOfHalfQuarterBeat + 1, bpm, bpmStartTimeMicros)
             assertEquals(1, actual24thBeatRoundUp)
         }
     }
@@ -385,4 +423,202 @@ class LightComposerUtilUnitTest {
         arrayOf(199.0, 301507.537688442),
         arrayOf(200.0, 300000.000000000),
         arrayOf(201.0, 298507.462686567))
+
+    val a24thTruncateBpm = 78
+    val a24thTruncateStarTimeMicros: Long = 50215516
+
+    val testa24thTruncateMicros = listOf<Long>(
+            53292512,
+            53324544,
+            53356708,
+            53388636,
+            53420700,
+            53452728,
+            53484852,
+            53516896,
+            53548992,
+            53581028,
+            53612980,
+            53645100,
+            53677120,
+            53709208,
+            53741160,
+            53773296,
+            53805276,
+            53837320,
+            53869416,
+            53901468,
+            53933624,
+            53965556,
+            53997668,
+            54029676,
+            54061720,
+            54093756,
+            54125876,
+            54157844,
+            54189980,
+            54221968,
+            54254056,
+            54286192,
+            54318240,
+            54350200,
+            54382268,
+            54414364,
+            54446312,
+            54478360,
+            54510472,
+            54542476,
+            54574528,
+            54606656,
+            54638692,
+            54670716,
+            54702752,
+            54734784,
+            54766828,
+            54798900,
+            54831032,
+            54863080,
+            54895036,
+            54927176,
+            54959168,
+            54991208,
+            55023252,
+            55055404,
+            55087352,
+            55119524,
+            55151544,
+            55183604,
+            55215564,
+            55247708,
+            55279648,
+            55311796,
+            55343880,
+            55375932,
+            55407952,
+            55440000,
+            55471960,
+            55504080,
+            55536044,
+            55568204,
+            55600272,
+            55632324,
+            55664272,
+            55696432,
+            55728484,
+            55760472,
+            55792536,
+            55824536,
+            55856596,
+            55888744,
+            55920748,
+            55952828,
+            55984760,
+            56016880,
+            56048968,
+            56081028,
+            56112980,
+            56145008,
+            56177120,
+            56209144,
+            56241256,
+            56273252,
+            56305356,
+            56337324)
+
+    val testa24thTruncateBeats = listOf<Int>(0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95)
 }

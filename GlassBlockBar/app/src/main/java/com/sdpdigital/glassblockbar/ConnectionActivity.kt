@@ -1,6 +1,10 @@
 package com.sdpdigital.glassblockbar
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
@@ -8,12 +12,13 @@ import android.view.Window
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.sdpdigital.glassblockbar.ble.DiscoveredBluetoothDevice
 import com.sdpdigital.glassblockbar.viewmodel.GlassBlockBarViewModel
 import com.sdpdigital.glassblockbar.viewmodel.ScannerViewModel
-import no.nordicsemi.android.ble.livedata.state.ConnectionState;
+import no.nordicsemi.android.ble.livedata.state.ConnectionState
 
 
 /**
@@ -35,9 +40,15 @@ class ConnectionActivity : AppCompatActivity() {
 
     val SKIP_CONNECTION = false
 
+    private val REQUEST_PERMISSION_REQ_CODE = 34 // any 8-bit number
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+
         this.window.setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
             WindowManager.LayoutParams.FLAG_FULLSCREEN)
@@ -53,12 +64,58 @@ class ConnectionActivity : AppCompatActivity() {
         setupGlassBlockViewModel()
     }
 
+
+
     override fun onResume() {
         super.onResume()
 
         if (SKIP_CONNECTION) {
             onDeviceReady()
             scannerViewModel?.stopScan()
+        } else {
+            startScan()
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String?>, grantResults: IntArray) {
+        when (requestCode) {
+            REQUEST_PERMISSION_REQ_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // We have been granted the Manifest.permission.ACCESS_FINE_LOCATION permission. Now we may proceed with scanning.
+                    startScan()
+                }
+            }
+        }
+    }
+
+
+    /**
+     *
+     * Scan for 5 seconds and then stop scanning when a BluetoothLE device is found then lEScanCallback
+     *
+     * is activated This will perform regular scan for custom BLE Service UUID and then filter out.
+     *
+     * using class ScannerServiceParser
+     *
+     */
+    private fun startScan() {
+
+        // Since Android 6.0 we need to obtain Manifest.permission.ACCESS_FINE_LOCATION to be able to scan for
+
+        // Bluetooth LE devices. This is related to beacons as proximity devices.
+
+        // On API older than Marshmallow the following code does nothing.
+        if (ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+            // When user pressed Deny and still wants to use this functionality, show the rationale
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_PERMISSION_REQ_CODE)
+            }
+            return
+        }
+        mainHandler.post {
+            scannerViewModel?.startScan()
         }
     }
 
@@ -108,7 +165,7 @@ class ConnectionActivity : AppCompatActivity() {
         }
 
         scannerViewModel?.devices?.observe(this, deviceObserver)
-        scannerViewModel?.startScan()
+        startScan()
     }
 
     override fun onRestart() {

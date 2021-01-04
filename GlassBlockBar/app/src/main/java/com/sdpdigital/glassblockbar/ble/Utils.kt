@@ -236,6 +236,23 @@ object Utils {
     }
 
     /**
+     * Same as above except that it truncates the beat instead of rounding it
+     * @param division the divisional unit of the beat
+     * @param timeInMicros of current beat
+     * @param bpm beats per minute
+     * @param bpmStartTimeMicros start time of bpm counting in microseconds
+     * @return the number of 24th beats through the current measure that the time is rounded to
+     */
+    fun quantizeBeatWithinMeasureToTruncate(division: BeatDivision, timeSignature: TimeSignature,
+                                            timeInMicros: Long, bpm: Int, bpmStartTimeMicros: Long): Int {
+
+        val beatsElapsed = beatsElapsed(timeInMicros, bpm, bpmStartTimeMicros)
+        val beatsThroughMeasure = beatsThroughMeasure(timeSignature, beatsElapsed)
+        val numberOfDivisionalBeats = beatsThroughMeasure / division.one
+        return numberOfDivisionalBeats.toInt()
+    }
+
+    /**
      * @param timeInMicros of current beat
      * @param bpm beats per minute
      * @param bpmStartTimeMicros start time of bpm counting in microseconds
@@ -251,7 +268,9 @@ object Utils {
      * @return the number of beats through the current measure
      */
     fun beatsThroughMeasure(timeSignature: TimeSignature, beatsElapsed: Double): Double {
-        return beatsElapsed % timeSignature.beatsPerMeasure
+        // beatsElapsed % beatsPerMeasure
+        val beatsElapsedDivision = beatsElapsed / timeSignature.beatsPerMeasure.toDouble()
+        return beatsElapsed - (beatsElapsedDivision.toInt() * timeSignature.beatsPerMeasure)
     }
 
     /**
@@ -332,7 +351,7 @@ object Utils {
      *                              second beat is 24, and last is (4 * 24) = 96.
      * @return messages ready to send over BLE to describe a beat sequence
      */
-    fun encodeMeasureOfQuantizedBeats(animationIndex: Int, tapsQuantizedTo24thBeats: List<Int>): List<IntArray> {
+    fun encodeBeatSequence(animationIndex: Int, tapsQuantizedTo24thBeats: List<Int>): List<IntArray> {
         val msgList = ArrayList<IntArray>()
         val msg = ArrayList<Int>()
 
@@ -389,7 +408,7 @@ object Utils {
      *
      * @return the new beatSequence value to be used
      */
-    fun decodeMeasureOfQuantized24thBeatsMessage(
+    fun decodeAndAppendBeatSequence(
             encodedMessage: Array<Int>,
             encodedMessageSize: Int,
             beatSequence: Array<Int>,
@@ -412,7 +431,7 @@ object Utils {
         while (!found && (i < encodedMessageSize)) {
             // Check for end of the message, if these conditions are met
             if (encodedMessage[i] == 0 &&
-                (encodedMessage[i -1] != 255)) {
+                (encodedMessage[i - 1] != 255)) {
                 accurateMessageSize = i - 2 - count255
                 found = true
             } else if (encodedMessage[i] == 255) {
@@ -452,9 +471,6 @@ object Utils {
         for (encodedIdx in 2 until (accurateMessageSize + 2 + count255)) {
             // Always add to the running total
             newLastBeatValIn24th += encodedMessage[encodedIdx]
-            if (i == 33) {
-                val debug = true
-            }
             // 255 is a case where it is considered "carried over"
             // to the next sum, and not an actual beat value
             if (encodedMessage[encodedIdx] != 255) {

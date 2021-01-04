@@ -21,6 +21,7 @@ import com.google.android.material.tabs.TabLayout
 import com.sdpdigital.glassblockbar.ble.Utils
 import com.sdpdigital.glassblockbar.view.BeatSequenceView
 import com.sdpdigital.glassblockbar.viewmodel.*
+import kotlin.math.max
 import kotlin.math.round
 
 /**
@@ -196,6 +197,12 @@ class LightComposerFragment : Fragment() {
         rootView.findViewById<Button>(R.id.button_undo_beat_sequence)?.setOnClickListener {
             beatSequenceView?.undoLastBeatSequence()
         }
+        rootView.findViewById<Button>(R.id.send_to_animation_sf)?.setOnClickListener {
+            sendBeatSequence(0)
+        }
+        rootView.findViewById<Button>(R.id.send_to_animation_rb)?.setOnClickListener {
+            sendBeatSequence(1)
+        }
 
         beatSequenceView = rootView.findViewById(R.id.beat_sequence_view)
 
@@ -300,46 +307,79 @@ class LightComposerFragment : Fragment() {
         addBeatSequenceButton?.isEnabled = bpm > 0
     }
 
+    val debugCaptureMicros = ArrayList<Long>()
+    val debugCaptureBeat = ArrayList<Int>()
     private fun refreshBeatIndicatorTextAndScheduleRunnable() {
-        currentBpm()?.let { bpm ->
-            currentBpmStartTime()?.let { startTime ->
-                // See which beat we are on
-                val nowMicros = SystemClock.uptimeMillis() * 1000
-                val startTimeMicros = startTime * 1000
-                val beatsElapsed = Utils.beatsElapsed(nowMicros, bpm, startTimeMicros)
-                val beatRemainder = beatsElapsed - beatsElapsed.toInt()
 
-                // Check beats through the measure
-                val timeSig = (currentTimeSig() ?: TimeSignatureEnum.FOUR_FOUR.value)
-                val beatNumThroughMeasure =
-                        Utils.beatsThroughMeasure(timeSig, beatsElapsed).toInt() + 1
 
-                var indicatorText = ""
-                for (i in 1 until beatNumThroughMeasure) {
-                    indicatorText += "$i . "
-                    if (i % 4 == 0) { indicatorText += "\n" } // move to next line
-                }
-                indicatorText += "$beatNumThroughMeasure "
-                if (beatRemainder >= 0.5) {
-                    indicatorText += ". "
-                }
-                bpmIndicatorTextView?.text = indicatorText
+        val bpm = currentBpm()
+        val startTimeMillis = currentBpmStartTime() ?: return
+        val timeSig = currentTimeSig() ?: return
 
-                currentTimeSig()?.let {
-                    val current24thBeatInMeasure = Utils.quantizeBeatWithinMeasureTo(
-                            beatUnit, it, nowMicros, bpm, startTimeMicros)
-                    beatSequenceView?.setCurrentBeat(current24thBeatInMeasure)
-                }
+        // See which beat we are on
+        val nowMicros = (SystemClock.uptimeMillis() + 6) * 1000
+        val startTimeMicros = startTimeMillis * 1000
+        val current24thBeatWithinMeasure = Utils.quantizeBeatWithinMeasureToTruncate(
+                Utils.BeatDivision.TWENTY_FOURTH, timeSig,
+                nowMicros, bpm, startTimeMicros)
 
-                // Compute the delay to wait until next 24th beat
-                val current24thMillis = (startTimeMicros +
-                        Utils.quantizeBeatToInMicros(beatUnit, nowMicros, bpm, startTimeMicros)) / 1000.0
-                val a24thBeatInMillis = (Utils.microsInBeat(bpm) / Utils.BeatDivision.TWENTY_FOURTH.divisor) / 1000.0
-                val nextBeatTimeInMillis = current24thMillis + a24thBeatInMillis
-                val delay = round(nextBeatTimeInMillis - SystemClock.uptimeMillis()).toLong()
+        sendBeat(current24thBeatWithinMeasure)
 
-                mainHandler.postDelayed(bpmIndicatorRunnable, delay)
+        val wholeBeatsThrough = current24thBeatWithinMeasure.toDouble() /
+                Utils.BeatDivision.TWENTY_FOURTH.divisor.toDouble()
+
+        val wholeBeatsThroughPlus1 = wholeBeatsThrough.toInt() + 1
+        var indicatorText = ""
+        for (i in 1 until wholeBeatsThroughPlus1) {
+            indicatorText += "$i . "
+            if (i % 4 == 0) { indicatorText += "\n" } // move to next line
+        }
+        indicatorText += "$wholeBeatsThroughPlus1 "
+        if ((wholeBeatsThrough - wholeBeatsThrough.toInt()) >= 0.5) {
+            indicatorText += ". "
+        }
+        bpmIndicatorTextView?.text = indicatorText
+        beatSequenceView?.setCurrentBeat(current24thBeatWithinMeasure)
+
+        if (current24thBeatWithinMeasure == 0) {
+            var debugMicrosStr = ""
+            var debugBeatsStr = ""
+            for (i in 0 until debugCaptureBeat.size) {
+                debugMicrosStr += debugCaptureMicros[i].toString() + ", "
+                debugBeatsStr += debugCaptureBeat[i].toString() + ", "
             }
+            Log.d("DEBUG_CAPTURE", "startTime $startTimeMicros")
+            Log.d("DEBUG_CAPTURE", "bpm $bpm")
+            Log.d("DEBUG_CAPTURE", "micros $debugMicrosStr")
+            Log.d("DEBUG_CAPTURE", "beats $debugBeatsStr")
+            debugCaptureMicros.clear()
+            debugCaptureBeat.clear()
+        }
+        debugCaptureMicros.add(nowMicros)
+        debugCaptureBeat.add(current24thBeatWithinMeasure)
+
+        // Compute the delay to wait until next 24th beat
+        val current24thMillis = (startTimeMicros +
+                Utils.quantizeBeatToInMicros(beatUnit, nowMicros, bpm, startTimeMicros)) / 1000.0
+        val a24thBeatInMillis = (Utils.microsInBeat(bpm) / Utils.BeatDivision.TWENTY_FOURTH.divisor) / 1000.0
+        val nextBeatTimeInMillis = current24thMillis + a24thBeatInMillis
+        val delay = round(nextBeatTimeInMillis - SystemClock.uptimeMillis()).toLong()
+
+        mainHandler.postDelayed(bpmIndicatorRunnable, delay - 5) // + 1 to avoid rounding errors
+    }
+
+    private fun sendBeat(currentBeat: Int) {
+        val firstByte = if (currentBeat <= 255) { currentBeat } else { currentBeat - 255 }
+        val secondByte = if (currentBeat <= 255) { 0 } else { 255 }
+        if (currentBeat % 2 == 0) {
+            glassBlockViewModel?.sendBeatSequence(ByteArray(20) {
+                when (it) {
+                    0 -> return@ByteArray 3
+                    1 -> return@ByteArray firstByte.toByte()
+                    2 -> return@ByteArray secondByte.toByte()
+                }
+                return@ByteArray 0
+            })
         }
     }
 
@@ -347,6 +387,15 @@ class LightComposerFragment : Fragment() {
         lastTapTime = null
         sum = 0L
         tapCount = 0
+    }
+
+    public fun sendBeatSequence(animationIndex: Int) {
+        beatSequenceView?.getBeatSequence()?.let { sequence ->
+            Utils.encodeBeatSequence(animationIndex, sequence).forEach {
+                val byteArray = ByteArray(it.size) { i -> it[i].toByte() }
+                glassBlockViewModel?.sendBeatSequence(byteArray)
+            }
+        }
     }
 
     private fun clearBeatSequence() {

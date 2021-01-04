@@ -195,25 +195,41 @@
     </com.google.android.material.tabs.TabLayout>
 
     <Button
-        android:id="@+id/button_undo_beat_sequence"
-        android:layout_width="200dp"
-        android:layout_height="40dp"
+        android:id="@+id/send_to_animation_rb"
+        android:layout_width="@dimen/beat_sequence_send_width"
+        android:layout_height="@dimen/beat_sequence_send_height"
+        android:text="Send RB"
+        android:layout_above="@+id/button_undo_beat_sequence"
+        android:layout_alignParentRight="true"/>
+
+    <Button
+        android:id="@+id/send_to_animation_sf"
+        android:layout_width="@dimen/beat_sequence_send_width"
+        android:layout_height="@dimen/beat_sequence_send_height"
+        android:text="Send SF"
+        android:layout_above="@+id/button_undo_beat_sequence"
+        android:layout_toLeftOf="@id/send_to_animation_rb"/>
+
+    <Button
+        android:id="@id/button_undo_beat_sequence"
+        android:layout_width="@dimen/beat_sequence_add_width"
+        android:layout_height="@dimen/beat_sequence_clear_height"
         android:text="Undo"
         android:layout_above="@+id/button_clear_beat_sequence"
         android:layout_alignParentRight="true"/>
 
     <Button
         android:id="@id/button_clear_beat_sequence"
-        android:layout_width="200dp"
-        android:layout_height="40dp"
+        android:layout_width="@dimen/beat_sequence_add_width"
+        android:layout_height="@dimen/beat_sequence_clear_height"
         android:text="Clear"
         android:layout_above="@+id/button_add_beat_sequence"
         android:layout_alignParentRight="true"/>
 
     <Button
         android:id="@id/button_add_beat_sequence"
-        android:layout_width="200dp"
-        android:layout_height="120dp"
+        android:layout_width="@dimen/beat_sequence_add_width"
+        android:layout_height="@dimen/beat_sequence_add_height"
         android:text="Add"
         android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"/>
@@ -221,7 +237,7 @@
     <com.sdpdigital.glassblockbar.view.BeatSequenceView
         android:id="@id/beat_sequence_view"
         android:layout_width="match_parent"
-        android:layout_height="200dp"
+        android:layout_height="@dimen/beat_sequence_height"
         android:layout_alignParentBottom="true"
         android:layout_toLeftOf="@id/button_add_beat_sequence"/>
 

@@ -39,7 +39,7 @@
                 style="@style/Theme.VerticalGlassBlockSeekBar"
                 android:id="@id/seek_bar_brightness"
                 android:layout_width="wrap_content"
-                android:layout_height="300dp"
+                android:layout_height="@dimen/vertical_slider_height"
                 android:layout_centerHorizontal="true"
                 android:layout_above="@+id/brightness_text_view"
                 android:layout_marginTop="@dimen/medium_margin"
