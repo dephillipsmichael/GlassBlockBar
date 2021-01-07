@@ -1,7 +1,7 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android" >
 
     <item
-        android:drawable="@drawable/glass_block_small">
+        android:drawable="@drawable/glass_block">
     </item>
 
 </layer-list>

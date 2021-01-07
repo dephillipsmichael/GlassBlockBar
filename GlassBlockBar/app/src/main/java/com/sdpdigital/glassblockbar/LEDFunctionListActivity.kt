@@ -45,6 +45,9 @@ class LEDFunctionListActivity : AppCompatActivity(), ConnectionObserver {
 
     var glassBlockViewModel: GlassBlockBarViewModel? = null
 
+    val durationBetweenSends = 60;  // 60 millis
+    var lastColorSendTime = System.currentTimeMillis()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -86,9 +89,16 @@ class LEDFunctionListActivity : AppCompatActivity(), ConnectionObserver {
         brightnessSlider.setVerticalListener(object : VerticalSeekBar.VerticalProgressChangedListener {
             override fun onTouchUp(seekbar: VerticalSeekBar?, progress: Int) {
                 seekbar?.progress?.let { progress ->
+
+                    val now = System.currentTimeMillis()
+                    if ((now - lastColorSendTime) < durationBetweenSends) {
+                        return@let
+                    }
+
+
                     Log.d(LOG_TAG, "Sent new brightness $progress")
                     val brightnessOnlyARGB = ByteArray(4)
-                    { i -> arrayOf(progress, 0, 0, 0)[i].toByte() }
+                        { i -> arrayOf(0, progress, 0, 0, 0)[i].toByte() }
                     glassBlockViewModel?.sendARGB(brightnessOnlyARGB)
                 }
             }

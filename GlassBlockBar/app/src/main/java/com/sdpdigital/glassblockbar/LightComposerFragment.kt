@@ -374,7 +374,7 @@ class LightComposerFragment : Fragment() {
         if (currentBeat % 2 == 0) {
             glassBlockViewModel?.sendBeatSequence(ByteArray(20) {
                 when (it) {
-                    0 -> return@ByteArray 3
+                    0 -> return@ByteArray 4
                     1 -> return@ByteArray firstByte.toByte()
                     2 -> return@ByteArray secondByte.toByte()
                 }
@@ -423,6 +423,10 @@ class LightComposerFragment : Fragment() {
         return (bpmFineTuneSeekBar?.progress ?: 0) + (rangeStart ?: 0)
     }
 
+    private fun currentBpmDelay(): Int {
+        return bpmDelaySeekBar?.progress ?: 0
+    }
+
     private fun bpmFromProgress(progress: Int): Int {
         lightComposerViewModel?.bpmInfo?.value?.bpmRange?.bpmRangeStart?.let {
             return progress + it
@@ -433,7 +437,7 @@ class LightComposerFragment : Fragment() {
     private fun sendBpmDelay(bpmOffsetMillis: Int) {
         Log.d(LOG_TAG, "Sent new bpm offset $bpmOffsetMillis")
         val setBpmBytes = ByteArray(4)
-        { i -> arrayOf(1, 0, 0, bpmOffsetMillis)[i].toByte() }
+            { i -> arrayOf(5, 0, currentBpm(), currentBpmDelay())[i].toByte() }
         glassBlockViewModel?.sendBpmInfo(setBpmBytes)
         lightComposerViewModel?.setBpmDelay(bpmOffsetMillis)
     }
@@ -441,7 +445,7 @@ class LightComposerFragment : Fragment() {
     private fun sendBpm(newBpm: Int, startTime: Long, resetRange: Boolean = false) {
         Log.d(LOG_TAG, "Sent new bpm $newBpm")
         val setBpmBytes = ByteArray(4)
-            { i -> arrayOf(0, 0, 0, newBpm)[i].toByte() }
+            { i -> arrayOf(5, 0, currentBpm(), currentBpmDelay())[i].toByte() }
         glassBlockViewModel?.sendBpmInfo(setBpmBytes)
 
         if (resetRange) {

@@ -298,9 +298,9 @@ object Utils {
     // Beat measure characteristic data length
     const val beatMeasueDataLength = 20
     // Start command byte
-    const val startSequenceByte = 1
+    const val startSequenceByte = 2
     // Append part to previous sequence messages
-    const val appendSequenceByte = 2
+    const val appendSequenceByte = 3
 
     /**
      * To efficiently send quantized beat sequences through BLE,

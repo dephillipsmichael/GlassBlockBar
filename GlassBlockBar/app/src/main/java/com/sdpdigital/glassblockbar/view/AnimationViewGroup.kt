@@ -135,12 +135,12 @@ public class RainbowExpandableAdapter(groups: List<ExpandableGroup<*>?>?) :
 
         // Seekbar item
         (holder as? SeekBarInputChildViewHolder)?.let {
-            (group?.items?.get(childIndex) as? SeekBarInput)?.let { setting ->
-                holder?.setRainbowSetting(setting)
+            (group?.items?.get(childIndex) as? SeekBarInput)?.let { seekBarSetting ->
+                holder?.setRainbowSetting(seekBarSetting)
                 holder?.seekBarAnimSpeed?.setOnSeekBarChangeListener(object: SeekBar.OnSeekBarChangeListener{
                     override fun onProgressChanged(p0: SeekBar?, progress: Int, p2: Boolean) {
-                        setting.seekBarProgress = progress
-                        holder?.setRainbowSetting(setting)
+                        seekBarSetting.seekBarProgress = progress
+                        holder?.setRainbowSetting(seekBarSetting)
                     }
                     override fun onStartTrackingTouch(p0: SeekBar?) { /** no-op */ }
                     override fun onStopTrackingTouch(seekBar: SeekBar?) {
@@ -152,7 +152,8 @@ public class RainbowExpandableAdapter(groups: List<ExpandableGroup<*>?>?) :
             }
         }
 
-        // Seekbar item
+
+        // Pattern selector item
         (holder as? PatternSelectorInputChildViewHolder)?.let {
             (group?.items?.get(childIndex) as? PatternSelectorInput)?.let { setting ->
                 holder?.setPattern(setting)
@@ -162,7 +163,8 @@ public class RainbowExpandableAdapter(groups: List<ExpandableGroup<*>?>?) :
                         if (setting.patternIdx < 0) {
                             setting.patternIdx = setting.patterns.size - 1
                         }
-                        childListener?.onNewPatternSelected(group, childIndex, setting.patternIdx)
+                        childListener?.onNewPatternSelected(group, childIndex,
+                                setting.patternIdx)
                         notifyDataSetChanged()
                     }
                 })
@@ -172,7 +174,8 @@ public class RainbowExpandableAdapter(groups: List<ExpandableGroup<*>?>?) :
                         if (setting.patternIdx >= setting.patterns.size) {
                             setting.patternIdx = 0
                         }
-                        childListener?.onNewPatternSelected(group, childIndex, setting.patternIdx)
+                        childListener?.onNewPatternSelected(group, childIndex,
+                                setting.patternIdx)
                         notifyDataSetChanged()
                     }
                 })

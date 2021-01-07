@@ -97,10 +97,23 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
     }
 
     public fun writeBeatSequenceMessage(beatSeqBytes: ByteArray) {
+
+        var bytesTosend = beatSeqBytes
+
+        // For commands that don't use all the bytes, write them as 0s
+        if (beatSeqBytes.size < 20) {
+            bytesTosend = ByteArray(20) {
+                if (it < bytesTosend.size) {
+                    return@ByteArray bytesTosend[it]
+                }
+                return@ByteArray 0
+            }
+        }
+
         // We do not want any commands queueing up
         // cancelQueue()
         // You may easily enqueue more operations here like such:
-        writeCharacteristic(beatSequenceCharacteristic, beatSeqBytes)
+        writeCharacteristic(beatSequenceCharacteristic, bytesTosend)
                 .done { device: BluetoothDevice? ->
                     //Log.d("EQ_DEBUG", "Eq sent $debug")
                 }
@@ -128,7 +141,7 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
                 bpmCharacteristic = service.getCharacteristic(BPM_CHAR)
                 // equalizerLongCharacteristic = service.getCharacteristic(EQ_LONG_CHAR)
                 beatSequenceCharacteristic = service.getCharacteristic(BEAT_SEQ_CHAR);
-                argbCharacteristic?.writeType = WRITE_TYPE_NO_RESPONSE
+                beatSequenceCharacteristic?.writeType = WRITE_TYPE_NO_RESPONSE
                 //argbCharacteristic?.writeType = WRITE_TYPE_NO_RESPONSE
             }
             // Return true if all required services have been found

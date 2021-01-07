@@ -29,7 +29,6 @@
         android:textSize="@dimen/title_text_size"
         android:layout_gravity="center"
         android:gravity="center"
-        android:text="Pattern"
         android:layout_weight="1"/>
 
     <Button

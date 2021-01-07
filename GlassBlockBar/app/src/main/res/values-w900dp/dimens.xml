@@ -22,5 +22,7 @@
     <dimen name="beat_sequence_send_height">100dp</dimen>
     <dimen name="beat_sequence_clear_height">40dp</dimen>
 
+    <dimen name="tap_bpm_button_size">360dp</dimen>
+
 
 </resources>

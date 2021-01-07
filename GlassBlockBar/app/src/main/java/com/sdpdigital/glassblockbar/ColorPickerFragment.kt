@@ -1,6 +1,7 @@
 package com.sdpdigital.glassblockbar
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -27,6 +28,9 @@ class ColorPickerFragment : Fragment() {
 
     val currentArgb = arrayOf(255, 255, 255, 255) // full white
 
+    val durationBetweenSends = 60;
+    var lastColorSendTime = System.currentTimeMillis()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
     }
@@ -39,11 +43,23 @@ class ColorPickerFragment : Fragment() {
         val colorPickerListener =
             ColorEnvelopeListener { envelope, _ ->
                 envelope?.argb?.let {
-                    val newArgbArray = ByteArray(4) { idx -> it[idx].toByte() }
+
+                    val debug = it.joinToString(", ") { value -> "$value" }
+                    Log.d(LOG_TAG, "Color tapped $debug")
+
+                    val now = System.currentTimeMillis()
+                    if (now - lastColorSendTime < durationBetweenSends) {
+                        return@ColorEnvelopeListener
+                    }
+                    lastColorSendTime = now
+
+                    val newArgbArray = ByteArray(5) { idx ->
+                        if (idx == 0) { return@ByteArray 0 }
+                        return@ByteArray it[idx - 1].toByte()
+                    }
                     glassBlockViewModel?.sendARGB(newArgbArray)
                 }
             }
-        colorPicker?.debounceDuration = 1
         colorPicker?.setColorListener(colorPickerListener)
         val bubbleFlag = BubbleFlag(activity)
         bubbleFlag.flagMode = FlagMode.FADE
