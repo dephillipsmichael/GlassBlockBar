@@ -11,165 +11,178 @@
     android:padding="@dimen/medium_margin">
 
     <LinearLayout
-        android:id="@+id/top_container_root"
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/tap_bpm_button_size"
-        android:orientation="horizontal"
+        android:id="@+id/bpm_set_reset_container"
+        android:layout_width="@dimen/tap_reset_button_size"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_alignParentLeft="true"
         android:layout_alignParentTop="true">
 
-        <RelativeLayout
-            android:layout_width="@dimen/tap_bpm_button_size"
-            android:layout_height="match_parent"
-            android:padding="@dimen/medium_margin">
-            
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_alignParentTop="true"
-                android:layout_above="@+id/bpm_reset_button_container"
-                android:padding="@dimen/medium_margin"
-                android:orientation="horizontal"
-                android:weightSum="2">
+        <Button
+            android:id="@+id/bpm_recalibrate_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Send"
+            android:textSize="@dimen/body_text_size"
+            android:padding="@dimen/medium_margin"
+            android:textColor="@color/white"
+            android:background="@color/black"/>
 
-                <ImageButton
-                    android:id="@+id/bpm_left_button"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/glass_block_big"
-                    android:scaleType="centerInside"
-                    android:layout_weight="1"
-                    android:layout_margin="4dp"
-                    android:background="?selectableItemBackgroundBorderless" />
-
-                <ImageButton
-                    android:id="@+id/bpm_right_button"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/glass_block_big"
-                    android:scaleType="centerInside"
-                    android:layout_weight="1"
-                    android:layout_margin="4dp"
-                    android:background="?selectableItemBackgroundBorderless"/>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@id/bpm_reset_button_container"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="2"
-                android:layout_alignParentBottom="true">
-
-                <Button
-                    android:id="@+id/bpm_reset_button"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Reset"
-                    android:textSize="@dimen/title_text_size"
-                    android:layout_weight="1"
-                    android:background="?selectableItemBackgroundBorderless"/>
-
-                <Button
-                    android:id="@+id/bpm_recalibrate_button"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Send BPM"
-                    android:textSize="@dimen/title_text_size"
-                    android:layout_weight="1"
-                    android:background="?selectableItemBackgroundBorderless"/>
-
-            </LinearLayout>
-
-        </RelativeLayout>
-
-        <LinearLayout
-            android:layout_width="@dimen/tap_bpm_button_size"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:padding="@dimen/medium_margin">
-
-            <TextView
-                android:id="@+id/bpm_fine_tune_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="0 BPM"
-                android:textSize="@dimen/title_text_size"
-                android:padding="@dimen/medium_margin"/>
-
-            <androidx.appcompat.widget.AppCompatSeekBar
-                style="@style/Theme.GlassBlockSeekBar"
-                android:id="@+id/seek_bar_bpm_fine_tune"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:max="200"/>
-
-            <TextView
-                android:id="@+id/bpm_delay_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="0 ms BPM delay"
-                android:textSize="@dimen/title_text_size"
-                android:padding="@dimen/medium_margin"/>
-
-            <androidx.appcompat.widget.AppCompatSeekBar
-                style="@style/Theme.GlassBlockSeekBar"
-                android:id="@+id/seek_bar_bpm_delay"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:max="100"/>
-
-        </LinearLayout>
+        <Button
+            android:id="@+id/bpm_reset_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Reset"
+            android:textSize="@dimen/body_text_size"
+            android:padding="@dimen/medium_margin"
+            android:background="?selectableItemBackgroundBorderless"/>
 
     </LinearLayout>
 
+    <ImageButton
+        android:id="@+id/bpm_button"
+        android:layout_width="@dimen/tap_bpm_button_size"
+        android:layout_height="@dimen/tap_bpm_button_size"
+        android:src="@drawable/glass_block_big"
+        android:scaleType="centerInside"
+        android:layout_margin="4dp"
+        android:layout_toRightOf="@+id/bpm_set_reset_container"
+        android:background="?selectableItemBackgroundBorderless" />
+
     <TextView
         android:id="@+id/bpm_indicator_text"
-        android:layout_width="360dp"
+        android:layout_width="@dimen/tap_bpm_button_size"
         android:layout_height="wrap_content"
         android:text="-"
-        android:textSize="@dimen/title_text_size"
-        android:padding="@dimen/medium_margin"
-        android:layout_below="@id/top_container_root"/>
-
-    <TextView
-        android:id="@+id/sync_to_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Sync to "
         android:textSize="@dimen/body_text_size"
-        android:padding="@dimen/small_margin"
-        android:layout_above="@+id/beat_sequence_view"/>
+        android:padding="@dimen/medium_margin"
+        android:layout_below="@id/bpm_button"/>
 
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tab_sync_per_beat_fraction"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_toRightOf="@id/bpm_button"
+        android:layout_alignParentTop="true"
+        android:padding="@dimen/medium_margin">
+
+        <TextView
+            android:id="@+id/bpm_fine_tune_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="BPM not set"
+            android:textSize="@dimen/body_text_size"
+            android:padding="@dimen/small_margin"/>
+
+        <androidx.appcompat.widget.AppCompatSeekBar
+            style="@style/Theme.GlassBlockSeekBar"
+            android:id="@+id/seek_bar_bpm_fine_tune"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="200"/>
+
+        <TextView
+            android:id="@+id/bpm_delay_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="0 ms BPM delay"
+            android:textSize="@dimen/body_text_size"
+            android:padding="@dimen/small_margin"/>
+
+        <androidx.appcompat.widget.AppCompatSeekBar
+            style="@style/Theme.GlassBlockSeekBar"
+            android:id="@+id/seek_bar_bpm_delay"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tab_layout_beats_per_measure_container"
         android:layout_width="wrap_content"
-        android:layout_margin="@dimen/medium_margin"
-        android:layout_toRightOf="@id/sync_to_text"
-        android:layout_above="@id/beat_sequence_view">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_above="@id/tab_sync_per_beat_container">
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_height="match_parent"
+        <TextView
+            android:id="@+id/beats_in_measure_title"
             android:layout_width="wrap_content"
-            android:text="1/4"/>
+            android:layout_height="wrap_content"
+            android:text="Signature "
+            android:textSize="@dimen/body_text_size"
+            android:paddingBottom="@dimen/medium_margin"
+            android:layout_gravity="center"/>
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_height="match_parent"
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tab_layout_beats_per_measure"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content">
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_height="match_parent"
+                android:layout_width="wrap_content"
+                android:text="4/4"/>
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_height="match_parent"
+                android:layout_width="wrap_content"
+                android:text="8/8"/>
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_height="match_parent"
+                android:layout_width="wrap_content"
+                android:text="16/16" />
+
+        </com.google.android.material.tabs.TabLayout>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/tab_sync_per_beat_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_above="@+id/beat_sequence_view">
+
+        <TextView
+            android:id="@+id/sync_to_text"
             android:layout_width="wrap_content"
-            android:text="1/8"/>
+            android:layout_height="wrap_content"
+            android:text="Sync to "
+            android:textSize="@dimen/body_text_size"
+            android:paddingBottom="@dimen/medium_margin"
+            android:layout_gravity="center"/>
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_height="match_parent"
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tab_sync_per_beat_fraction"
+            android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:text="1/16" />
+            android:layout_margin="@dimen/medium_margin">
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_height="match_parent"
-            android:layout_width="wrap_content"
-            android:text="1/24" />
+            <com.google.android.material.tabs.TabItem
+                android:layout_height="match_parent"
+                android:layout_width="wrap_content"
+                android:text="1/4"/>
 
-    </com.google.android.material.tabs.TabLayout>
+            <com.google.android.material.tabs.TabItem
+                android:layout_height="match_parent"
+                android:layout_width="wrap_content"
+                android:text="1/8"/>
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_height="match_parent"
+                android:layout_width="wrap_content"
+                android:text="1/16" />
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_height="match_parent"
+                android:layout_width="wrap_content"
+                android:text="1/24" />
+
+        </com.google.android.material.tabs.TabLayout>
+
+    </LinearLayout>
 
     <Button
         android:id="@+id/send_to_animation_rb"

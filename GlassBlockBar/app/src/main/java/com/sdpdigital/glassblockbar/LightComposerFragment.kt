@@ -21,7 +21,6 @@ import com.google.android.material.tabs.TabLayout
 import com.sdpdigital.glassblockbar.ble.Utils
 import com.sdpdigital.glassblockbar.view.BeatSequenceView
 import com.sdpdigital.glassblockbar.viewmodel.*
-import kotlin.math.max
 import kotlin.math.round
 
 /**
@@ -38,8 +37,7 @@ class LightComposerFragment : Fragment() {
     var tapCount = 0
 
     // UI
-    var bpmLeftButton: ImageButton? = null
-    var bpmRightButton: ImageButton? = null
+    var bpmButton: ImageButton? = null
     var bpmDelaySeekBar: AppCompatSeekBar? = null
     var bpmFineTuneSeekBar: AppCompatSeekBar? = null
     var bpmSeekBarTextView: TextView? = null
@@ -73,18 +71,6 @@ class LightComposerFragment : Fragment() {
 
     // Main thread handler
     private val mainHandler = Handler()
-    private val bpmLeftTapStateRunnable = Runnable {
-//        bpmLeftButton?.setImageResource(R.drawable.glass_block_big_clicked)
-//        mainHandler.postDelayed({
-//            bpmLeftButton?.setImageResource(R.drawable.glass_block_big)
-//        }, 100)
-    }
-    private val bpmRightTapStateRunnable = Runnable {
-//        bpmRightButton?.setImageResource(R.drawable.glass_block_big_clicked)
-//        mainHandler.postDelayed({
-//            bpmRightButton?.setImageResource(R.drawable.glass_block_big)
-//        }, 100)
-    }
     private val bpmIndicatorRunnable = Runnable {
         refreshBeatIndicatorTextAndScheduleRunnable()
     }
@@ -105,18 +91,10 @@ class LightComposerFragment : Fragment() {
         bpmSeekBarTextView = rootView.findViewById(R.id.bpm_fine_tune_text)
         bpmDelaySeekBarTextView = rootView.findViewById(R.id.bpm_delay_text)
 
-        bpmLeftButton = rootView.findViewById(R.id.bpm_left_button)
-        bpmLeftButton?.setOnTouchListener { view, event ->
+        bpmButton = rootView.findViewById(R.id.bpm_button)
+        bpmButton?.setOnTouchListener { view, event ->
             if (event.action == ACTION_DOWN) {
-                bpmButtonTapped(event.eventTime, true)
-            }
-            return@setOnTouchListener true
-        }
-
-        bpmRightButton = rootView.findViewById(R.id.bpm_right_button)
-        bpmRightButton?.setOnTouchListener { _, event ->
-            if (event.action == ACTION_DOWN) {
-                bpmButtonTapped(event.eventTime, false)
+                bpmButtonTapped(event.eventTime)
             }
             return@setOnTouchListener true
         }
@@ -255,7 +233,7 @@ class LightComposerFragment : Fragment() {
         mainHandler.removeCallbacks(bpmIndicatorRunnable)
     }
 
-    private fun bpmButtonTapped(touchTime: Long, isLeftButton: Boolean) {
+    private fun bpmButtonTapped(touchTime: Long) {
         lastTapTime?.let {
             val diff = touchTime - it
             sum += diff
@@ -274,12 +252,6 @@ class LightComposerFragment : Fragment() {
         }
         lastTapTime = touchTime
 
-        // Run tap state animation
-        if (isLeftButton) {
-            mainHandler.post(bpmLeftTapStateRunnable)
-        } else { // if is right button
-            mainHandler.post(bpmRightTapStateRunnable)
-        }
         // Reset tap info after 3 seconds of inactivity
         mainHandler.removeCallbacks(resetBpmTapCountRunnable)
         mainHandler.postDelayed(resetBpmTapCountRunnable, 3000)

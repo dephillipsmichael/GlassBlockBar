@@ -35,11 +35,11 @@
                 tools:context="com.sdpdigital.glassblockbar.LEDFunctionListActivity"
                 tools:listitem="@layout/item_list_content" />
 
-            <com.sdpdigital.glassblockbar.view.VerticalSeekBar
-                style="@style/Theme.VerticalGlassBlockSeekBar"
+            <androidx.appcompat.widget.AppCompatSeekBar
+                style="@style/Theme.GlassBlockSeekBar"
                 android:id="@id/seek_bar_brightness"
-                android:layout_width="wrap_content"
-                android:layout_height="@dimen/vertical_slider_height"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_centerHorizontal="true"
                 android:layout_above="@+id/brightness_text_view"
                 android:layout_marginTop="@dimen/medium_margin"

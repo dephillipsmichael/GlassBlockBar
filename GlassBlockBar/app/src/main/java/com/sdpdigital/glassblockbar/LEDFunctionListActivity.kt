@@ -85,30 +85,44 @@ class LEDFunctionListActivity : AppCompatActivity(), ConnectionObserver {
         }
     }
 
-    private fun setupBrightnessSlider(brightnessSlider: VerticalSeekBar) {
-        brightnessSlider.setVerticalListener(object : VerticalSeekBar.VerticalProgressChangedListener {
-            override fun onTouchUp(seekbar: VerticalSeekBar?, progress: Int) {
-                seekbar?.progress?.let { progress ->
+    private fun setupBrightnessSlider(brightnessSlider: AppCompatSeekBar) {
 
-                    val now = System.currentTimeMillis()
-                    if ((now - lastColorSendTime) < durationBetweenSends) {
-                        return@let
-                    }
-
-
-                    Log.d(LOG_TAG, "Sent new brightness $progress")
-                    val brightnessOnlyARGB = ByteArray(4)
-                        { i -> arrayOf(0, progress, 0, 0, 0)[i].toByte() }
-                    glassBlockViewModel?.sendARGB(brightnessOnlyARGB)
-                }
+        brightnessSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekbar: SeekBar?, p1: Int, p2: Boolean) {
+                sendGlobalBrightness(seekbar?.progress)
             }
-            override fun progressChanged(seekbar: VerticalSeekBar?, progress: Int) {}
+
+            override fun onStartTrackingTouch(p0: SeekBar?) {
+                // No-op needed
+            }
+
+            override fun onStopTrackingTouch(p0: SeekBar?) {
+                // No-op needed
+            }
         })
+
         brightnessSlider.progress = brightnessSlider.max - 1
     }
 
     private fun bleDisconnecting() {
         finish()  // goes back to connection screen
+    }
+
+    private fun sendGlobalBrightness(brightness: Int?) {
+        if (brightness == null) {
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        if ((now - lastColorSendTime) < durationBetweenSends) {
+            return
+        }
+        lastColorSendTime = now
+
+        Log.d(LOG_TAG, "Sent new brightness $brightness")
+        val brightnessOnlyARGB = ByteArray(4)
+        { i -> arrayOf(0, brightness, 0, 0, 0)[i].toByte() }
+        glassBlockViewModel?.sendARGB(brightnessOnlyARGB)
     }
 
     private fun setupRecyclerView(recyclerView: RecyclerView) {
