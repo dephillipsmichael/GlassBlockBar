@@ -5,10 +5,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.SeekBar
-import androidx.appcompat.widget.AppCompatSeekBar
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -17,13 +14,8 @@ import com.sdpdigital.glassblockbar.view.AnimationChildViewGroups.SeekBarInput
 import com.sdpdigital.glassblockbar.view.RainbowExpandableAdapter
 import com.sdpdigital.glassblockbar.view.RainbowViewGroup
 import com.sdpdigital.glassblockbar.viewmodel.GlassBlockBarViewModel
-import com.skydoves.colorpickerview.ColorPickerView
-import com.skydoves.colorpickerview.flag.BubbleFlag
-import com.skydoves.colorpickerview.flag.FlagMode
-import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
 import com.thoughtbot.expandablerecyclerview.listeners.GroupExpandCollapseListener
 import com.thoughtbot.expandablerecyclerview.models.ExpandableGroup
-import no.nordicsemi.android.ble.livedata.state.ConnectionState
 
 
 /**
@@ -41,7 +33,8 @@ class AnimationPickerFragment : Fragment() {
     var recyclerView: RecyclerView? = null
 
     val RAINBOW_ROW_TITLE = "Rainbow Row"
-    val animations = listOf(RAINBOW_ROW_TITLE)
+    val RAINBOW_SINE_TITLE = "Rainbow Sine"
+    val animations = listOf(RAINBOW_ROW_TITLE, RAINBOW_SINE_TITLE)
 
     /**
      * From Arduino code:
@@ -60,12 +53,20 @@ class AnimationPickerFragment : Fragment() {
     val SLANTED_RIGHT_PATTERN = "Slanted Right"
     val ARROW_LEFT_PATTERN = "Arrow Left"
     val ARROW_RIGHT_PATTERN = "Arrow Right"
-    val SINE_PATTERN = "Square Wave"
-    val SINE_BLOCK_PATTERN = "Square Block Wave"
-    val CIRCLE_PATTERN = "Circle"
-    val patterns = arrayOf(
+    val rainbowRowPatterns = arrayOf(
         CLASSIC_PATTERN, OPPOSITE_PATTERN, SLANTED_LEFT_PATTERN, SLANTED_RIGHT_PATTERN,
-        ARROW_LEFT_PATTERN, ARROW_RIGHT_PATTERN, SINE_PATTERN, SINE_BLOCK_PATTERN, CIRCLE_PATTERN)
+        ARROW_LEFT_PATTERN, ARROW_RIGHT_PATTERN)
+
+    val SINE_PATTERN_BLOCK      = "Blocks"
+    val SINE_BLOCK_PATTERN_1GAP = "Blocks 1 gap"
+    val SINE_BLOCK_PATTERN_2GAP = "Blocks 2 gap"
+    val SINE_BLOCK_PATTERN_3GAP = "Blocks 3 gap"
+    val SINE_LED_PATTERN        = "LEDs"
+    val rainbowSinePatterns = arrayOf(
+            SINE_PATTERN_BLOCK, SINE_BLOCK_PATTERN_1GAP, SINE_BLOCK_PATTERN_2GAP, SINE_BLOCK_PATTERN_3GAP,
+            SINE_LED_PATTERN)
+
+    val CIRCLE_PATTERN = "Circle"
 
     val functionOff = -1
     var selectedFunction = functionOff
@@ -75,14 +76,19 @@ class AnimationPickerFragment : Fragment() {
     val animationGroups = listOf(
         RainbowViewGroup(RAINBOW_ROW_TITLE, listOf(
             SeekBarInput(startSpeed, "Animation Speed"),
-            PatternSelectorInput(patterns, 0)
+            PatternSelectorInput(rainbowRowPatterns, 0)
+        )),
+        RainbowViewGroup(RAINBOW_SINE_TITLE, listOf(
+                SeekBarInput(startSpeed, "Animation Speed"),
+                PatternSelectorInput(rainbowSinePatterns, 0)
         ))
     )
     val adapter = RainbowExpandableAdapter(animationGroups)
-    var patternIdx = 0
+    var rainbowRowPatternIdx = 0
+    var rainbowSinePatternIdx = 0
 
-    val rainbowRowSpeed: Int get() {
-        (animationGroups?.firstOrNull()?.items?.firstOrNull() as? SeekBarInput)?.let {
+    fun seekBarProgress(groupIdx: Int): Int {
+        (animationGroups[groupIdx].items?.firstOrNull() as? SeekBarInput)?.let {
             return it.seekBarProgress
         }
         return startSpeed
@@ -125,7 +131,12 @@ class AnimationPickerFragment : Fragment() {
                     adapter.collapseAllGroups(groupUnwrapped)
 
                     groupIndexOf(groupUnwrapped.title)?.let {
-                        sendAnimationAndSpeed(it)
+                        val patternIdx = when(it) {
+                            0 -> rainbowRowPatternIdx
+                            1 -> rainbowSinePatternIdx
+                            else -> 0
+                        }
+                        sendAnimationAndSpeed(it, patternIdx)
                     }
                 }
             }
@@ -137,7 +148,12 @@ class AnimationPickerFragment : Fragment() {
                 when (group?.title) {
                     RAINBOW_ROW_TITLE -> {
                         groupIndexOf(group.title)?.let {
-                            sendAnimationAndSpeed(it)
+                            sendAnimationAndSpeed(it, rainbowRowPatternIdx)
+                        }
+                    }
+                    RAINBOW_SINE_TITLE -> {
+                        groupIndexOf(group.title)?.let {
+                            sendAnimationAndSpeed(it, rainbowSinePatternIdx)
                         }
                     }
                 }
@@ -147,8 +163,14 @@ class AnimationPickerFragment : Fragment() {
                 when (group?.title) {
                     RAINBOW_ROW_TITLE -> {
                         groupIndexOf(group.title)?.let {
-                            patternIdx = pattern
-                            sendAnimationAndSpeed(it)
+                            rainbowRowPatternIdx = pattern
+                            sendAnimationAndSpeed(it, rainbowRowPatternIdx)
+                        }
+                    }
+                    RAINBOW_SINE_TITLE -> {
+                        rainbowSinePatternIdx = pattern
+                        groupIndexOf(group.title)?.let {
+                            sendAnimationAndSpeed(it, rainbowSinePatternIdx)
                         }
                     }
                 }
@@ -157,29 +179,18 @@ class AnimationPickerFragment : Fragment() {
         recyclerView?.adapter = adapter
     }
 
-    private fun sendAnimationAndSpeed(groupIdx: Int) {
+    private fun sendAnimationAndSpeed(groupIdx: Int, patternIdx: Int) {
         selectedFunction = groupIdx
 
-//        if (selectedFunction == animations.indexOf(RAINBOW_TITLE)) {
-//            Log.d(LOG_TAG, "Sent Rainbow animation start")
-//            glassBlockViewModel?.sendARGB(ByteArray(4) {
-//                arrayOf(1, 33, 99, 133)[it].toByte() })
-//        }
-        if  (selectedFunction == animations.indexOf(RAINBOW_ROW_TITLE)) {
-            val speed = rainbowRowSpeed
-            Log.d(LOG_TAG, "Sent Rainbow row $patternIdx change $speed")
-            val speedChangeARGB = ByteArray(4)
-                { i -> arrayOf(1, 0, patternIdx, speed)[i].toByte() }
-            glassBlockViewModel?.sendARGB(speedChangeARGB)
-        }
+        val speed = seekBarProgress(groupIdx)
+        Log.d(LOG_TAG, "Sent Rainbow row $patternIdx change $speed")
+        val speedChangeARGB = ByteArray(4)
+            { i -> arrayOf(1, groupIdx, patternIdx, speed)[i].toByte() }
+        glassBlockViewModel?.sendARGB(speedChangeARGB)
     }
 
     private fun groupIndexOf(title: String): Int? {
-        when(title) {
-//            RAINBOW_TITLE -> return animations.indexOf(RAINBOW_TITLE)
-            RAINBOW_ROW_TITLE -> return animations.indexOf(RAINBOW_ROW_TITLE)
-        }
-        return null
+        return animations.indexOf(title)
     }
 
     private fun setupGlassBlockViewModel() {

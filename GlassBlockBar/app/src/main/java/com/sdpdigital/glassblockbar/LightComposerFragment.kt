@@ -340,19 +340,32 @@ class LightComposerFragment : Fragment() {
         mainHandler.postDelayed(bpmIndicatorRunnable, delay - 5) // + 1 to avoid rounding errors
     }
 
+    private var beatSeqMsgs: List<IntArray>? = null;
+
+
     private fun sendBeat(currentBeat: Int) {
+
+        beatSeqMsgs?.let {
+            sendNextBeatSeq()
+            if (it.size == 1) {
+                beatSeqMsgs = null
+            } else {
+                beatSeqMsgs = it.subList(0, it.size - 1)
+            }
+            return
+        }
+
         val firstByte = if (currentBeat <= 255) { currentBeat } else { currentBeat - 255 }
         val secondByte = if (currentBeat <= 255) { 0 } else { 255 }
-        if (currentBeat % 2 == 0) {
-            glassBlockViewModel?.sendBeatSequence(ByteArray(20) {
-                when (it) {
-                    0 -> return@ByteArray 4
-                    1 -> return@ByteArray firstByte.toByte()
-                    2 -> return@ByteArray secondByte.toByte()
-                }
-                return@ByteArray 0
-            })
-        }
+
+        glassBlockViewModel?.sendBeatSequence(ByteArray(20) {
+            when (it) {
+                0 -> return@ByteArray 4
+                1 -> return@ByteArray firstByte.toByte()
+                2 -> return@ByteArray secondByte.toByte()
+            }
+            return@ByteArray 0
+        })
     }
 
     private fun resetBpmCounter() {
@@ -363,11 +376,16 @@ class LightComposerFragment : Fragment() {
 
     public fun sendBeatSequence(animationIndex: Int) {
         beatSequenceView?.getBeatSequence()?.let { sequence ->
-            Utils.encodeBeatSequence(animationIndex, sequence).forEach {
-                val byteArray = ByteArray(it.size) { i -> it[i].toByte() }
-                glassBlockViewModel?.sendBeatSequence(byteArray)
-            }
+            beatSeqMsgs = Utils.encodeBeatSequence(animationIndex, sequence)
         }
+    }
+
+    private fun sendNextBeatSeq() {
+        val it = beatSeqMsgs?.firstOrNull() ?: run {
+            return
+        }
+        val byteArray = ByteArray(it.size) { i -> it[i].toByte() }
+        glassBlockViewModel?.sendBeatSequence(byteArray)
     }
 
     private fun clearBeatSequence() {

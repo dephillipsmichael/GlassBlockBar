@@ -96,7 +96,7 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
                 .enqueue()
     }
 
-    public fun writeBeatSequenceMessage(beatSeqBytes: ByteArray) {
+    public fun writeBeatSequenceMessage(beatSeqBytes: ByteArray, cancelAll: Boolean = false) {
 
         var bytesTosend = beatSeqBytes
 
@@ -109,6 +109,11 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
                 return@ByteArray 0
             }
         }
+
+//        This is causing BLE to become unresponsive
+//        if (cancelAll) {
+//            super.cancelQueue()
+//        }
 
         // We do not want any commands queueing up
         // cancelQueue()

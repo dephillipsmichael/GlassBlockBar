@@ -188,7 +188,7 @@
         android:id="@+id/send_to_animation_rb"
         android:layout_width="@dimen/beat_sequence_send_width"
         android:layout_height="@dimen/beat_sequence_send_height"
-        android:text="Send RB"
+        android:text="Send 1"
         android:layout_above="@+id/button_undo_beat_sequence"
         android:layout_alignParentRight="true"/>
 
@@ -196,7 +196,7 @@
         android:id="@+id/send_to_animation_sf"
         android:layout_width="@dimen/beat_sequence_send_width"
         android:layout_height="@dimen/beat_sequence_send_height"
-        android:text="Send SF"
+        android:text="Send 0"
         android:layout_above="@+id/button_undo_beat_sequence"
         android:layout_toLeftOf="@id/send_to_animation_rb"/>
 

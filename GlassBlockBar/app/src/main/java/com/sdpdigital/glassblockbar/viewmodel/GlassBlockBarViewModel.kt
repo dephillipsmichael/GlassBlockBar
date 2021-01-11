@@ -47,7 +47,7 @@ class GlassBlockBarViewModel(application: Application) : AndroidViewModel(applic
     }
 
     public fun sendBeatSequence(beatSeq: ByteArray) {
-        glassBlockManager.writeBeatSequenceMessage(beatSeq)
+        glassBlockManager.writeBeatSequenceMessage(beatSeq, true)
     }
 
     /**
