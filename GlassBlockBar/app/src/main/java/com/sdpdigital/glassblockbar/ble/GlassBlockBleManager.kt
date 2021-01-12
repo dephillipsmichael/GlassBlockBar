@@ -6,8 +6,6 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
 import android.content.Context
 import android.util.Log
-import kotlinx.coroutines.delay
-import no.nordicsemi.android.ble.ConnectionPriorityRequest.CONNECTION_PRIORITY_BALANCED
 import no.nordicsemi.android.ble.ConnectionPriorityRequest.CONNECTION_PRIORITY_HIGH
 import no.nordicsemi.android.ble.PhyRequest
 import no.nordicsemi.android.ble.livedata.ObservableBleManager
@@ -19,11 +17,7 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
     val LOG_TAG = GlassBlockBleManager::class.java.simpleName
 
     // Characteristic for writing value for all the glass blocks
-    private var argbCharacteristic: BluetoothGattCharacteristic? = null
-    private var lowMidHighCharacteristic: BluetoothGattCharacteristic? = null
-    private var bpmCharacteristic: BluetoothGattCharacteristic? = null
-    //private var equalizerLongCharacteristic: BluetoothGattCharacteristic? = null
-    private var beatSequenceCharacteristic: BluetoothGattCharacteristic? = null
+    private var communicationCharacteristic: BluetoothGattCharacteristic? = null
 
     override fun getGattCallback(): BleManagerGattCallback {
         return MyManagerGattCallback()
@@ -37,66 +31,11 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
         Log.println(priority, "GlassBlockBleManager", message)
     }
 
-    public fun writeARGBValue(argbValue: ByteArray) {
-        // We do not want any commands queueing up
-        //cancelQueue()
-        // You may easily enqueue more operations here like such:
-        writeCharacteristic(argbCharacteristic, argbValue)
-            .done { device: BluetoothDevice? ->
-                val debug = argbValue.map { it }
-                log(
-                    Log.INFO,
-                    "ARGB value sent $argbValue"
-                )
-            }
-            .enqueue()
-
-        Log.d(LOG_TAG, "")
+    public fun clearDeviceCache() {
+        refreshDeviceCache().enqueue()
     }
 
-    public fun writeLowMidHighBeats(lowMidHighBytes: ByteArray) {
-        // We do not want any commands queueing up
-        cancelQueue()
-        // You may easily enqueue more operations here like such:
-        writeCharacteristic(lowMidHighCharacteristic, lowMidHighBytes)
-                .done { device: BluetoothDevice? ->
-                    log(
-                            Log.INFO,
-                            "Low, Mid, High bytes sent $lowMidHighBytes"
-                    )
-                }
-                .enqueue()
-    }
-
-    public fun writeEqualizer(eqBytes: ByteArray) {
-////        val debug = eqBytes.map { "$it, " }
-////        Log.d("EQ_DEBUG", "Eq sending $debug")
-//        // We do not want any commands queueing up
-//        cancelQueue()
-//        // You may easily enqueue more operations here like such:
-//        writeCharacteristic(equalizerLongCharacteristic, eqBytes)
-//                .done { device: BluetoothDevice? ->
-//                    //Log.d("EQ_DEBUG", "Eq sent $debug")
-//                }
-//                .enqueue()
-    }
-
-
-
-    public fun writeBpmInfo(bpmBytes: ByteArray) {
-//        val debug = eqBytes.map { "$it, " }
-//        Log.d("EQ_DEBUG", "Eq sending $debug")
-        // We do not want any commands queueing up
-        // cancelQueue()
-        // You may easily enqueue more operations here like such:
-        writeCharacteristic(bpmCharacteristic, bpmBytes)
-                .done { device: BluetoothDevice? ->
-                    //Log.d("EQ_DEBUG", "Eq sent $debug")
-                }
-                .enqueue()
-    }
-
-    public fun writeBeatSequenceMessage(beatSeqBytes: ByteArray, cancelAll: Boolean = false) {
+    public fun writeCommunicationCharMessage(beatSeqBytes: ByteArray, cancelAll: Boolean = false) {
 
         var bytesTosend = beatSeqBytes
 
@@ -118,7 +57,7 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
         // We do not want any commands queueing up
         // cancelQueue()
         // You may easily enqueue more operations here like such:
-        writeCharacteristic(beatSequenceCharacteristic, bytesTosend)
+        writeCharacteristic(communicationCharacteristic, bytesTosend)
                 .done { device: BluetoothDevice? ->
                     //Log.d("EQ_DEBUG", "Eq sent $debug")
                 }
@@ -141,20 +80,11 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
                 gatt.getService(LED_SERVICE_UUID)
 
             if (service != null) {
-                argbCharacteristic = service.getCharacteristic(ARGB_CHAR)
-                lowMidHighCharacteristic = service.getCharacteristic(LMH_CHAR)
-                bpmCharacteristic = service.getCharacteristic(BPM_CHAR)
-                // equalizerLongCharacteristic = service.getCharacteristic(EQ_LONG_CHAR)
-                beatSequenceCharacteristic = service.getCharacteristic(BEAT_SEQ_CHAR);
-                beatSequenceCharacteristic?.writeType = WRITE_TYPE_NO_RESPONSE
-                //argbCharacteristic?.writeType = WRITE_TYPE_NO_RESPONSE
+                communicationCharacteristic = service.getCharacteristic(COMMUNICATION_CHAR_UUID);
+                communicationCharacteristic?.writeType = WRITE_TYPE_NO_RESPONSE
             }
             // Return true if all required services have been found
-            return argbCharacteristic != null &&
-                    lowMidHighCharacteristic != null &&
-                    bpmCharacteristic != null &&
-                    beatSequenceCharacteristic != null;
-                    //equalizerLongCharacteristic != null // Allow connection even if some characteristics are missing
+            return communicationCharacteristic != null
         }
 
         // If you have any optional services, allocate them here. Return true only if
@@ -185,9 +115,7 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
                     }
                 )
                 .add(setPreferredPhy(
-                    PhyRequest.PHY_LE_1M_MASK,
-                    PhyRequest.PHY_LE_2M_MASK,
-                    PhyRequest.PHY_OPTION_NO_PREFERRED
+                    PhyRequest.PHY_LE_1M_MASK, PhyRequest.PHY_LE_1M_MASK, PhyRequest.PHY_OPTION_NO_PREFERRED
                 )
                     .fail { device: BluetoothDevice?, status: Int ->
                         log(
@@ -212,11 +140,7 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
 
         override fun onDeviceDisconnected() {
             // Device disconnected. Release your references here.
-            argbCharacteristic = null
-            lowMidHighCharacteristic = null
-            bpmCharacteristic = null
-            beatSequenceCharacteristic = null
-            //equalizerLongCharacteristic = null
+            communicationCharacteristic = null
         }
     }
 
@@ -230,16 +154,8 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
 
     companion object {
         val LED_SERVICE_UUID =
-            UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e")
-
-        val ARGB_CHAR =
-            UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
-        val LMH_CHAR =
-                UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e")
-        val BPM_CHAR =
-                UUID.fromString("6e400004-b5a3-f393-e0a9-e50e24dcca9e")
-        // val EQ_LONG_CHAR = UUID.fromString("6e400005-b5a3-f393-e0a9-e50e24dcca9e")
-        val BEAT_SEQ_CHAR =
+                UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e")
+        val COMMUNICATION_CHAR_UUID =
                 UUID.fromString("6e400005-b5a3-f393-e0a9-e50e24dcca9e")
     }
 }

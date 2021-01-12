@@ -30,24 +30,28 @@ class GlassBlockBarViewModel(application: Application) : AndroidViewModel(applic
         reconnect()
     }
 
+    public fun clearDeviceCache() {
+        glassBlockManager.clearDeviceCache()
+    }
+
     public fun sendARGB(argb: ByteArray) {
-        glassBlockManager.writeBeatSequenceMessage(argb)
+        glassBlockManager.writeCommunicationCharMessage(argb)
     }
 
     public fun sendLowMidHigh(lowMidHigh: ByteArray) {
-        glassBlockManager.writeBeatSequenceMessage(lowMidHigh)
+        glassBlockManager.writeCommunicationCharMessage(lowMidHigh)
     }
 
     public fun sendBpmInfo(bpmValues: ByteArray) {
-        glassBlockManager.writeBeatSequenceMessage(bpmValues)
+        glassBlockManager.writeCommunicationCharMessage(bpmValues)
     }
 
     public fun sendEqualizer(eqValues: ByteArray) {
-        glassBlockManager.writeBeatSequenceMessage(eqValues)
+        glassBlockManager.writeCommunicationCharMessage(eqValues)
     }
 
     public fun sendBeatSequence(beatSeq: ByteArray) {
-        glassBlockManager.writeBeatSequenceMessage(beatSeq, true)
+        glassBlockManager.writeCommunicationCharMessage(beatSeq, true)
     }
 
     /**

@@ -203,6 +203,7 @@ class ConnectionActivity : AppCompatActivity() {
     fun onDeviceDisconnecting() {
         Log.d(LOG_TAG, "Glass Block disconnecting...")
         scannerViewModel?.startScan()
+        connectionStateText?.text = "Scanning..."
     }
 
     fun onDeviceInitializing() {

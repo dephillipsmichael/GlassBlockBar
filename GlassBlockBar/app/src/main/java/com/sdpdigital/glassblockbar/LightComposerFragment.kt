@@ -342,12 +342,11 @@ class LightComposerFragment : Fragment() {
 
     private var beatSeqMsgs: List<IntArray>? = null;
 
-
     private fun sendBeat(currentBeat: Int) {
 
         beatSeqMsgs?.let {
             sendNextBeatSeq()
-            if (it.size == 1) {
+            if (it.size <= 1) {
                 beatSeqMsgs = null
             } else {
                 beatSeqMsgs = it.subList(0, it.size - 1)
@@ -358,14 +357,16 @@ class LightComposerFragment : Fragment() {
         val firstByte = if (currentBeat <= 255) { currentBeat } else { currentBeat - 255 }
         val secondByte = if (currentBeat <= 255) { 0 } else { 255 }
 
-        glassBlockViewModel?.sendBeatSequence(ByteArray(20) {
-            when (it) {
-                0 -> return@ByteArray 4
-                1 -> return@ByteArray firstByte.toByte()
-                2 -> return@ByteArray secondByte.toByte()
-            }
-            return@ByteArray 0
-        })
+        if (currentBeat % 2 == 0) {
+            glassBlockViewModel?.sendBeatSequence(ByteArray(20) {
+                when (it) {
+                    0 -> return@ByteArray 4
+                    1 -> return@ByteArray firstByte.toByte()
+                    2 -> return@ByteArray secondByte.toByte()
+                }
+                return@ByteArray 0
+            })
+        }
     }
 
     private fun resetBpmCounter() {
@@ -425,17 +426,25 @@ class LightComposerFragment : Fragment() {
     }
 
     private fun sendBpmDelay(bpmOffsetMillis: Int) {
+        var beatsPerMeasure = currentTimeSig()?.beatsPerMeasure ?: run {
+            return
+        }
+
         Log.d(LOG_TAG, "Sent new bpm offset $bpmOffsetMillis")
         val setBpmBytes = ByteArray(4)
-            { i -> arrayOf(5, 0, currentBpm(), currentBpmDelay())[i].toByte() }
+            { i -> arrayOf(5, beatsPerMeasure, currentBpm(), currentBpmDelay())[i].toByte() }
         glassBlockViewModel?.sendBpmInfo(setBpmBytes)
         lightComposerViewModel?.setBpmDelay(bpmOffsetMillis)
     }
 
     private fun sendBpm(newBpm: Int, startTime: Long, resetRange: Boolean = false) {
+        var beatsPerMeasure = currentTimeSig()?.beatsPerMeasure ?: run {
+            return
+        }
+
         Log.d(LOG_TAG, "Sent new bpm $newBpm")
         val setBpmBytes = ByteArray(4)
-            { i -> arrayOf(5, 0, currentBpm(), currentBpmDelay())[i].toByte() }
+            { i -> arrayOf(5, beatsPerMeasure, currentBpm(), currentBpmDelay())[i].toByte() }
         glassBlockViewModel?.sendBpmInfo(setBpmBytes)
 
         if (resetRange) {
