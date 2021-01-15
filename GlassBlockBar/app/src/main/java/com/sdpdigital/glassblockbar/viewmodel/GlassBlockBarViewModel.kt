@@ -4,6 +4,7 @@ import android.app.Application
 import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import com.sdpdigital.glassblockbar.GlassBlockBarApplication
 import com.sdpdigital.glassblockbar.ble.GlassBlockBleManager
 import com.sdpdigital.glassblockbar.ble.DiscoveredBluetoothDevice
 import no.nordicsemi.android.ble.livedata.state.BondState
@@ -30,28 +31,41 @@ class GlassBlockBarViewModel(application: Application) : AndroidViewModel(applic
         reconnect()
     }
 
+    private val app: GlassBlockBarApplication? get() {
+        return getApplication() as? GlassBlockBarApplication
+    }
+
+    public fun sendBleMessage(msg: ByteArray) {
+        app?.writeBleMessage(msg)
+    }
+
     public fun clearDeviceCache() {
         glassBlockManager.clearDeviceCache()
     }
 
     public fun sendARGB(argb: ByteArray) {
-        glassBlockManager.writeCommunicationCharMessage(argb)
+        sendBleMessage(argb)
+        //glassBlockManager.writeCommunicationCharMessage(argb)
     }
 
     public fun sendLowMidHigh(lowMidHigh: ByteArray) {
-        glassBlockManager.writeCommunicationCharMessage(lowMidHigh)
+        sendBleMessage(lowMidHigh)
+       // glassBlockManager.writeCommunicationCharMessage(lowMidHigh)
     }
 
     public fun sendBpmInfo(bpmValues: ByteArray) {
-        glassBlockManager.writeCommunicationCharMessage(bpmValues)
+        sendBleMessage(bpmValues)
+        //glassBlockManager.writeCommunicationCharMessage(bpmValues)
     }
 
     public fun sendEqualizer(eqValues: ByteArray) {
-        glassBlockManager.writeCommunicationCharMessage(eqValues)
+        sendBleMessage(eqValues)
+       // glassBlockManager.writeCommunicationCharMessage(eqValues)
     }
 
     public fun sendBeatSequence(beatSeq: ByteArray) {
-        glassBlockManager.writeCommunicationCharMessage(beatSeq, true)
+        sendBleMessage(beatSeq)
+        //glassBlockManager.writeCommunicationCharMessage(beatSeq, true)
     }
 
     /**

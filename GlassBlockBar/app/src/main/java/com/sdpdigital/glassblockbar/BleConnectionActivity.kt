@@ -1,9 +1,10 @@
 package com.sdpdigital.glassblockbar
 
 import android.Manifest
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
-import android.content.Context
+import android.bluetooth.*
+import android.bluetooth.le.BluetoothLeScanner
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanResult
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -22,32 +23,51 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.sdpdigital.glassblockbar.ble.DiscoveredBluetoothDevice
 import com.sdpdigital.glassblockbar.viewmodel.GlassBlockBarViewModel
-import com.sdpdigital.glassblockbar.viewmodel.ScannerViewModel
 import no.nordicsemi.android.ble.livedata.state.ConnectionState
-
-
+import java.util.*
 
 /**
  * An activity that handles connection with the bar, and updates
  * the user to state changes.
  */
-class ConnectionActivity : AppCompatActivity() {
+class BleConnectionActivity : AppCompatActivity(), BleEventListener {
 
-    val bluetoothAdapter: BluetoothAdapter by lazy {
-        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothManager.adapter
+    private var isScanning = false
+
+    private fun createScanCallback(): ScanCallback {
+        return object : ScanCallback() {
+            override fun onScanResult(callbackType: Int, result: ScanResult) {
+                if (!isScanning) {
+                    return
+                }
+
+                result.device?.let {
+                    if (it.name == null) {
+                        return@let
+                    }
+                    if (it.name.startsWith("Glass Block")) {
+                        Log.d(
+                                LOG_TAG,
+                                "Found BLE device! Name: ${it.name ?: "Unnamed"}, address: $it.address"
+                        )
+                        stopScan()
+                        onDeviceConnecting()
+                        app?.bleListener = this@BleConnectionActivity
+                        app?.connect(it.address)
+                    }
+                }
+            }
+        }
     }
+    private var scanCallback: ScanCallback? = null
 
     val ENABLE_BLUETOOTH_REQUEST_CODE = 1523
 
-    val LOG_TAG = (ConnectionActivity::class).simpleName
-
-    val bleNamePrefix = "Glass Block Bar"
+    val LOG_TAG = (BleConnectionActivity::class).simpleName
 
     var connectionStateText: TextView? = null
     var progressBar: ProgressBar? = null
 
-    var scannerViewModel: ScannerViewModel? = null
     var glassBlockViewModel: GlassBlockBarViewModel? = null
 
     val mainHandler = Handler()
@@ -56,6 +76,20 @@ class ConnectionActivity : AppCompatActivity() {
 
     private val REQUEST_PERMISSION_REQ_CODE = 34 // any 8-bit number
 
+    val LED_SERVICE_UUID =
+        UUID.fromString("6e400010-b5a3-f393-e0a9-e50e24dcca9e")
+
+    private val app: GlassBlockBarApplication? get() {
+        return (application as? GlassBlockBarApplication)
+    }
+
+    private val bluetoothAdapter: BluetoothAdapter? get() {
+        return app?.bluetoothAdapter
+    }
+
+    private val bleScanner: BluetoothLeScanner? get() {
+        return app?.bleScanner
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,40 +109,47 @@ class ConnectionActivity : AppCompatActivity() {
         // Let user know we are starting scanning
         connectionStateText?.text = "Scanning..."
 
-        setupScannerViewModel()
         setupGlassBlockViewModel()
     }
 
     override fun onResume() {
         super.onResume()
 
-        if (!bluetoothAdapter.isEnabled) {
+        app?.bleListener = this
+
+        if (bluetoothAdapter?.isEnabled != true) {
             promptEnableBluetooth()
         } else {
             startScanning()
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        app?.bleListener = null
+    }
+
     private fun startScanning() {
-        if (!bluetoothAdapter.isEnabled) {
+        if (bluetoothAdapter?.isEnabled != true) {
             return
         }
 
         if (SKIP_CONNECTION) {
             onDeviceReady()
-            scannerViewModel?.stopScan()
         } else {
             startScan()
         }
     }
 
     private fun promptEnableBluetooth() {
-        if (!bluetoothAdapter.isEnabled) {
+        if (bluetoothAdapter?.isEnabled != true) {
             progressBar?.visibility = View.INVISIBLE
             connectionStateText?.text = "Bluetooth disabled"
 
-            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            startActivityForResult(enableBtIntent, ENABLE_BLUETOOTH_REQUEST_CODE)
+            bluetoothAdapter?.let {
+                val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                startActivityForResult(enableBtIntent, ENABLE_BLUETOOTH_REQUEST_CODE)
+            }
         }
     }
 
@@ -141,7 +182,7 @@ class ConnectionActivity : AppCompatActivity() {
 
         // On API older than Marshmallow the following code does nothing.
         if (ContextCompat.checkSelfPermission(this,
-                        Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
             // When user pressed Deny and still wants to use this functionality, show the rationale
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -150,7 +191,14 @@ class ConnectionActivity : AppCompatActivity() {
             return
         }
         mainHandler.post {
-            scannerViewModel?.startScan()
+            if (isScanning) {
+                return@post
+            }
+            Log.d(LOG_TAG, "Started scanning...")
+            isScanning = true
+            val scanSettings = app?.scanSettings ?: run { return@post }
+            scanCallback = createScanCallback()
+            bleScanner?.startScan(null, scanSettings, scanCallback)
         }
     }
 
@@ -176,38 +224,6 @@ class ConnectionActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupScannerViewModel() {
-        // Create view model containing utility methods for scanning
-        scannerViewModel = ViewModelProvider(this).get(ScannerViewModel::class.java)
-
-        // Create the observer which updates the UI.
-        val deviceObserver = Observer<List<DiscoveredBluetoothDevice>> { deviceList  ->
-            mainHandler.post {
-                // Update the UI, in this case, a TextView.
-                deviceList?.let { devices ->
-                    Log.d(LOG_TAG, "New device list " + devices.map { it.name })
-                }
-                deviceList?.filter { device ->
-                    device.name?.let {
-                        return@filter it.startsWith(bleNamePrefix)
-                    }
-                    return@filter false
-                }?.first()?.let {
-                    connect(it)
-                    stopScan()
-                }
-            }
-        }
-
-        scannerViewModel?.devices?.observe(this, deviceObserver)
-        startScanning()
-    }
-
-    override fun onRestart() {
-        super.onRestart()
-        clear()
-    }
-
     override fun onStop() {
         super.onStop()
         stopScan()
@@ -217,23 +233,29 @@ class ConnectionActivity : AppCompatActivity() {
      * stop scanning for bluetooth devices.
      */
     private fun stopScan() {
-        scannerViewModel?.stopScan()
-    }
-
-    /**
-     * Clears the list of devices, which will notify the observer.
-     */
-    private fun clear() {
-        scannerViewModel?.devices?.clear()
-        scannerViewModel?.scannerState?.clearRecords()
-    }
-
-    public fun connect(device: DiscoveredBluetoothDevice) {
-        progressBar?.visibility = View.VISIBLE
-        if (connectionStateText?.text != "Connecting...") {
-            connectionStateText?.text != "Connecting..."
-            glassBlockViewModel?.connect(device)
+        if (isScanning) {
+            Log.d(LOG_TAG, "Stopped scanning...")
+            bleScanner?.stopScan(scanCallback)
         }
+        isScanning = false
+    }
+
+    fun onDeviceDiscoveringServicesFailed() {
+        Log.d(LOG_TAG, "Discovering Services Failed...")
+        progressBar?.visibility = View.VISIBLE
+        connectionStateText?.text = "Discovering Services Failed"
+    }
+
+    fun onDeviceDiscoveringServices() {
+        Log.d(LOG_TAG, "Discovering Services...")
+        progressBar?.visibility = View.VISIBLE
+        connectionStateText?.text = "Discovering Services..."
+    }
+
+    fun onDeviceRequestingMTU() {
+        Log.d(LOG_TAG, "Negotiating MTU...")
+        progressBar?.visibility = View.VISIBLE
+        connectionStateText?.text = "Negotiating MTU..."
     }
 
     fun onDeviceDisconnecting() {
@@ -260,5 +282,19 @@ class ConnectionActivity : AppCompatActivity() {
         Log.d(LOG_TAG, "Glass Block connecting...")
         progressBar?.visibility = View.VISIBLE
         connectionStateText?.text = "Connecting."
+    }
+
+    override fun connectionStateChanged(userMessaging: String) {
+        Log.d(LOG_TAG, userMessaging)
+        progressBar?.visibility = View.VISIBLE
+        connectionStateText?.text = userMessaging
+    }
+
+    override fun disconnected() {
+        startScanning()
+    }
+
+    override fun connectedAndReady() {
+        onDeviceReady()
     }
 }

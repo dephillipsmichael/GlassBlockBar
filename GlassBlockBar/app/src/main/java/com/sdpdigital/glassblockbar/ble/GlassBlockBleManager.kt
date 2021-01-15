@@ -76,6 +76,14 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
         // You need to obtain references to the characteristics and descriptors that you will use.
         // Return true if all required services are found, false otherwise.
         public override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
+            Log.d(LOG_TAG, "isRequiredServiceSupported")
+            val servicesCount = gatt.services.size
+            Log.d(LOG_TAG, "Services count $servicesCount")
+
+            for (gattService in gatt.services) {
+                Log.d(LOG_TAG, "Service UUID Found: " + gattService.uuid.toString())
+            }
+
             val service =
                 gatt.getService(LED_SERVICE_UUID)
 
@@ -115,7 +123,7 @@ public class GlassBlockBleManager(context: Context) : ObservableBleManager(conte
                     }
                 )
                 .add(setPreferredPhy(
-                    PhyRequest.PHY_LE_1M_MASK, PhyRequest.PHY_LE_1M_MASK, PhyRequest.PHY_OPTION_NO_PREFERRED
+                    PhyRequest.PHY_LE_1M_MASK, PhyRequest.PHY_LE_2M_MASK, PhyRequest.PHY_OPTION_NO_PREFERRED
                 )
                     .fail { device: BluetoothDevice?, status: Int ->
                         log(

@@ -295,7 +295,8 @@ class LightComposerFragment : Fragment() {
                 Utils.BeatDivision.TWENTY_FOURTH, timeSig,
                 nowMicros, bpm, startTimeMicros)
 
-        sendBeat(current24thBeatWithinMeasure)
+        // This is done by the Arduino now
+        //sendBeat(current24thBeatWithinMeasure)
 
         val wholeBeatsThrough = current24thBeatWithinMeasure.toDouble() /
                 Utils.BeatDivision.TWENTY_FOURTH.divisor.toDouble()
@@ -377,7 +378,11 @@ class LightComposerFragment : Fragment() {
 
     public fun sendBeatSequence(animationIndex: Int) {
         beatSequenceView?.getBeatSequence()?.let { sequence ->
-            beatSeqMsgs = Utils.encodeBeatSequence(animationIndex, sequence)
+            for (beatSeq in Utils.encodeBeatSequence(animationIndex, sequence)) {
+                glassBlockViewModel?.sendBeatSequence(ByteArray(20) {
+                    return@ByteArray beatSeq[it].toByte()
+                })
+            }
         }
     }
 

@@ -23,7 +23,7 @@
             android:configChanges="orientation|keyboardHidden">
         </activity>
         <activity
-            android:name=".ConnectionActivity"
+            android:name=".BleConnectionActivity"
             android:label="@string/title_item_detail"
             android:theme="@style/Theme.GlassBlockBar.NoActionBar"
             android:screenOrientation="landscape"
