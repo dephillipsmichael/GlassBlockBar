@@ -169,26 +169,15 @@ object Utils {
      * The rest of them are used to quantize music in more common (4/4) patterns.
      */
     public enum class BeatDivision(val divisor: Int) {
-        FOURTH(        4),
-        EIGHTH(        8),
-        SIXTEENTH(    16),
+        FOURTH(4),
+        EIGHTH(8),
+        SIXTEENTH(16),
         TWENTY_FOURTH(24);
 
-        val one: Double get() {
-            return 1.0 / divisor.toDouble()
-        }
-    }
-
-    fun isWholeBeat24th(beatNum: Int): Boolean {
-        return beatNum % 24 == 0
-    }
-
-    fun isHalfBeat24th(beatNum: Int): Boolean {
-        return beatNum % 12 == 0
-    }
-
-    fun isQuarterBeat24th(beatNum: Int): Boolean {
-        return beatNum % 6 == 0
+        val one: Double
+            get() {
+                return 1.0 / divisor.toDouble()
+            }
     }
 
     /**

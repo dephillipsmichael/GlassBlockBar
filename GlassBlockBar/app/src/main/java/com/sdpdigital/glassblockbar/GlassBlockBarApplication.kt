@@ -160,33 +160,43 @@ class GlassBlockBarApplication : Application(), ViewModelStoreOwner {
         }
     }
 
+    private fun updateDisconnectedStatus() {
+        mainHandler.post {
+            bleListener?.disconnected()
+        }
+    }
+
     private fun createGattCallback(): BluetoothGattCallback {
         return object : BluetoothGattCallback() {
 
             override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
                 val deviceAddress = gatt.device.address
-                if (status == BluetoothGatt.GATT_SUCCESS) {
-                    if (newState == BluetoothProfile.STATE_CONNECTED) {
-                        Log.d(LOG_TAG, "Successfully connected to $deviceAddress")
-                        mainHandler.post {
-                            val debug = gatt.device.name
-                            Log.d(LOG_TAG, "Discovering services $debug")
-                            //?.requestMtu(23)
-                            connectedGatt?.discoverServices()
-                            updateConnectedListener("Discovering Services...")
-                            //updateConnectedListener("Requesting MTU...")
-                        }
-                    } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                        Log.d(LOG_TAG, "Successfully disconnected from $deviceAddress")
-                        gatt.close()
+                mainHandler.post {
+                    if (status == BluetoothGatt.GATT_SUCCESS) {
+                        if (newState == BluetoothProfile.STATE_CONNECTED) {
+                            Log.d(LOG_TAG, "Successfully connected to $deviceAddress")
 
-                        if (currentActivityClassType != BleConnectionActivity::class.java.simpleName) {
-                            goBackToConnectionScreen()
+                                val debug = gatt.device.name
+                                Log.d(LOG_TAG, "Discovering services $debug")
+                                //?.requestMtu(23)
+                                connectedGatt?.discoverServices()
+                                updateConnectedListener("Discovering Services...")
+                                //updateConnectedListener("Requesting MTU...")
+
+                        } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                            Log.d(LOG_TAG, "Successfully disconnected from $deviceAddress")
+                            gatt.close()
+
+                            if (currentActivityClassType != BleConnectionActivity::class.java.simpleName) {
+                                goBackToConnectionScreen()
+                                updateDisconnectedStatus()
+                            }
                         }
+                    } else {
+                        Log.d(LOG_TAG, "Error $status encountered for $deviceAddress! Disconnecting...")
+                        gatt.close()
+                        updateDisconnectedStatus()
                     }
-                } else {
-                    Log.d(LOG_TAG, "Error $status encountered for $deviceAddress! Disconnecting...")
-                    gatt.close()
                 }
             }
 

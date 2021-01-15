@@ -51,8 +51,8 @@ class LightComposerFragment : Fragment() {
 
     // BPM Seek Bar Range
     private val bpmRange = 20
-    // Each beat is divided into 24 equal pieces, see MIDI protocol for more info
-    private val beatUnit = Utils.BeatDivision.TWENTY_FOURTH
+    // Each beat is divided into 16 equal pieces, see MIDI protocol for more info
+    private val beatUnit = Utils.BeatDivision.SIXTEENTH
 
     private val timeSigs = arrayOf(
             TimeSignatureEnum.FOUR_FOUR,
@@ -226,6 +226,7 @@ class LightComposerFragment : Fragment() {
                 mainHandler.post(bpmIndicatorRunnable)
             }
         }
+        sendBeatControllerStart()
     }
 
     override fun onPause() {
@@ -283,7 +284,6 @@ class LightComposerFragment : Fragment() {
     val debugCaptureBeat = ArrayList<Int>()
     private fun refreshBeatIndicatorTextAndScheduleRunnable() {
 
-
         val bpm = currentBpm()
         val startTimeMillis = currentBpmStartTime() ?: return
         val timeSig = currentTimeSig() ?: return
@@ -291,15 +291,15 @@ class LightComposerFragment : Fragment() {
         // See which beat we are on
         val nowMicros = (SystemClock.uptimeMillis() + 6) * 1000
         val startTimeMicros = startTimeMillis * 1000
-        val current24thBeatWithinMeasure = Utils.quantizeBeatWithinMeasureToTruncate(
-                Utils.BeatDivision.TWENTY_FOURTH, timeSig,
+        val currentDivisionalBeatWithinMeasure = Utils.quantizeBeatWithinMeasureToTruncate(
+                Utils.BeatDivision.SIXTEENTH, timeSig,
                 nowMicros, bpm, startTimeMicros)
 
         // This is done by the Arduino now
-        //sendBeat(current24thBeatWithinMeasure)
+        //sendBeat(current16thBeatWithinMeasure)
 
-        val wholeBeatsThrough = current24thBeatWithinMeasure.toDouble() /
-                Utils.BeatDivision.TWENTY_FOURTH.divisor.toDouble()
+        val wholeBeatsThrough = currentDivisionalBeatWithinMeasure.toDouble() /
+                Utils.BeatDivision.SIXTEENTH.divisor.toDouble()
 
         val wholeBeatsThroughPlus1 = wholeBeatsThrough.toInt() + 1
         var indicatorText = ""
@@ -312,9 +312,9 @@ class LightComposerFragment : Fragment() {
             indicatorText += ". "
         }
         bpmIndicatorTextView?.text = indicatorText
-        beatSequenceView?.setCurrentBeat(current24thBeatWithinMeasure)
+        beatSequenceView?.setCurrentBeat(currentDivisionalBeatWithinMeasure)
 
-        if (current24thBeatWithinMeasure == 0) {
+        if (currentDivisionalBeatWithinMeasure == 0) {
             var debugMicrosStr = ""
             var debugBeatsStr = ""
             for (i in 0 until debugCaptureBeat.size) {
@@ -329,13 +329,13 @@ class LightComposerFragment : Fragment() {
             debugCaptureBeat.clear()
         }
         debugCaptureMicros.add(nowMicros)
-        debugCaptureBeat.add(current24thBeatWithinMeasure)
+        debugCaptureBeat.add(currentDivisionalBeatWithinMeasure)
 
-        // Compute the delay to wait until next 24th beat
-        val current24thMillis = (startTimeMicros +
+        // Compute the delay to wait until next 16th beat
+        val current16thMillis = (startTimeMicros +
                 Utils.quantizeBeatToInMicros(beatUnit, nowMicros, bpm, startTimeMicros)) / 1000.0
-        val a24thBeatInMillis = (Utils.microsInBeat(bpm) / Utils.BeatDivision.TWENTY_FOURTH.divisor) / 1000.0
-        val nextBeatTimeInMillis = current24thMillis + a24thBeatInMillis
+        val a16thBeatInMillis = (Utils.microsInBeat(bpm) / Utils.BeatDivision.SIXTEENTH.divisor) / 1000.0
+        val nextBeatTimeInMillis = current16thMillis + a16thBeatInMillis
         val delay = round(nextBeatTimeInMillis - SystemClock.uptimeMillis()).toLong()
 
         mainHandler.postDelayed(bpmIndicatorRunnable, delay - 5) // + 1 to avoid rounding errors
@@ -384,6 +384,10 @@ class LightComposerFragment : Fragment() {
                 })
             }
         }
+    }
+
+    public fun sendBeatControllerStart() {
+        glassBlockViewModel?.sendBeatSequence(ByteArray(1) { 6 })
     }
 
     private fun sendNextBeatSeq() {

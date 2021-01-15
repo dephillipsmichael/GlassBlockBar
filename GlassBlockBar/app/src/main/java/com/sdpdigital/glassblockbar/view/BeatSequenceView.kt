@@ -34,20 +34,28 @@ open class BeatSequenceView: View {
             invalidate()
         }
 
-    // The smallest divisor unit is 24th, so that is what we use to count
-    private val total24thBeats: Int get() {
+    // Switched over to 16th beat counting to give the animation more time to run
+    private val total16thBeats: Int get() {
         bpmInfo?.let {
-            return it.timeSignature.beatsPerMeasure * Utils.BeatDivision.TWENTY_FOURTH.divisor
+            return it.timeSignature.beatsPerMeasure * Utils.BeatDivision.SIXTEENTH.divisor
         }
         return 0
     }
+
+    // The smallest divisor unit is 24th, so that is what we use to count
+//    private val total24thBeats: Int get() {
+//        bpmInfo?.let {
+//            return it.timeSignature.beatsPerMeasure * Utils.BeatDivision.TWENTY_FOURTH.divisor
+//        }
+//        return 0
+//    }
 
     // You can change where the user's taps get quantized to on the fly
     public var quantizationUnit = Utils.BeatDivision.SIXTEENTH
         set(value) {
             field = value
 
-            quantizedBeatSequenceIn24th.clear()
+            quantizedBeatSequenceIn16th.clear()
             // Refresh beat sequence to new quantization
             for (beats in beatsThroughMeasure) {
                 processBeatsThroughMeasure(beats)
@@ -59,9 +67,9 @@ open class BeatSequenceView: View {
 
     // Raw user event tap translated to percent through measure
     private var beatsThroughMeasure = ArrayList<Double>()
-    private var quantizedBeatSequenceIn24th = ArrayList<Int>()
+    private var quantizedBeatSequenceIn16th = ArrayList<Int>()
     public fun getBeatSequence(): List<Int> {
-        return quantizedBeatSequenceIn24th
+        return quantizedBeatSequenceIn16th
     }
 
     /**
@@ -69,7 +77,7 @@ open class BeatSequenceView: View {
      */
     public fun clearBeatSequence() {
         beatsThroughMeasure.clear()
-        quantizedBeatSequenceIn24th.clear()
+        quantizedBeatSequenceIn16th.clear()
     }
 
     /**
@@ -78,7 +86,7 @@ open class BeatSequenceView: View {
     public fun undoLastBeatSequence() {
         if (beatsThroughMeasure.isNotEmpty()) {
             beatsThroughMeasure.removeAt(beatsThroughMeasure.size - 1)
-            quantizedBeatSequenceIn24th.removeAt(quantizedBeatSequenceIn24th.size - 1)
+            quantizedBeatSequenceIn16th.removeAt(quantizedBeatSequenceIn16th.size - 1)
         }
     }
 
@@ -115,13 +123,19 @@ open class BeatSequenceView: View {
         val quantizedTimeInMicros = Utils.quantizeBeatToInMicros(
                 quantizationUnit, beatTimeThroughMeasure, bpm, startTimeMicros)
 
-        // Then translate that to the beat sequencer's 24th scale
-        val beatIn24th = Utils.quantizeBeatWithinMeasureTo(
-                Utils.BeatDivision.TWENTY_FOURTH, timeSig,
+        // Then translate that to the beat sequencer's 16th scale
+        var beatIn16th = Utils.quantizeBeatWithinMeasureTo(
+                Utils.BeatDivision.SIXTEENTH, timeSig,
                 round(quantizedTimeInMicros).toLong(), bpm, startTimeMicros)
 
-        Log.d(LOG_TAG, "Added $beatIn24th")
-        quantizedBeatSequenceIn24th.add(beatIn24th)
+        if (beatIn16th == (Utils.BeatDivision.SIXTEENTH.divisor * timeSig.beatsPerMeasure)) {
+            beatIn16th = 0
+        }
+
+        Log.d(LOG_TAG, "Added $beatIn16th")
+        if (!quantizedBeatSequenceIn16th.contains(beatIn16th)) {
+            quantizedBeatSequenceIn16th.add(beatIn16th)
+        }
     }
 
     private var currentBeat = 0
@@ -181,7 +195,7 @@ open class BeatSequenceView: View {
             val floatHeight = height.toFloat()
 
             var backgroundPaintToUse =  backgroundPaint
-            if (quantizedBeatSequenceIn24th.contains(currentBeat)) {
+            if (quantizedBeatSequenceIn16th.contains(currentBeat)) {
                 backgroundPaintToUse = beatPaint
             }
 
@@ -191,13 +205,13 @@ open class BeatSequenceView: View {
             drawRect(currentBeatX, 0F, currentBeatX + 2F, floatHeight, currentBeatPaint)
 
             // Draw all the beat lines
-            for (beatNum in 0 until total24thBeats) {
+            for (beatNum in 0 until total16thBeats) {
                 currentBeatX = calculateXOfBeatIndicator(beatNum, floatWidth)
 
                 drawRect(currentBeatX, floatHeight - calculateHeightOfBeatTick(beatNum),
                         currentBeatX + 2F, floatHeight, beatTickPaint)
 
-                if (quantizedBeatSequenceIn24th.contains(beatNum)) {
+                if (quantizedBeatSequenceIn16th.contains(beatNum)) {
                     currentBeatX = calculateXOfBeatIndicator(beatNum, floatWidth)
                     drawRect(currentBeatX, 0F, currentBeatX + 2F, floatHeight, beatPaint)
                 }
@@ -208,18 +222,30 @@ open class BeatSequenceView: View {
     }
 
     fun calculateXOfBeatIndicator(beatNum: Int, totalWidth: Float): Float {
-        return (beatNum.toFloat() / total24thBeats.toFloat()) * totalWidth
+        return (beatNum.toFloat() / total16thBeats.toFloat()) * totalWidth
     }
 
     fun calculateHeightOfBeatTick(beatNum: Int): Float {
-        if (Utils.isWholeBeat24th(beatNum)) {
+        if (isWholeBeat16th(beatNum)) {
             return 48F
-        } else if (Utils.isWholeBeat24th(beatNum)) {
+        } else if (isHalfBeat16th(beatNum)) {
             return 32F
-        } else if (Utils.isWholeBeat24th(beatNum)) {
+        } else if (isQuarterBeat16th(beatNum)) {
             return 22F
         } else {
             return 18F
         }
+    }
+
+    fun isWholeBeat16th(beatNum: Int): Boolean {
+        return beatNum % 16 == 0
+    }
+
+    fun isHalfBeat16th(beatNum: Int): Boolean {
+        return beatNum % 8 == 0
+    }
+
+    fun isQuarterBeat16th(beatNum: Int): Boolean {
+        return beatNum % 4 == 0
     }
 }
