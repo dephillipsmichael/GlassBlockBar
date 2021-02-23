@@ -4,21 +4,15 @@ import android.graphics.Color
 import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
 import com.sdpdigital.glassblockbar.beatdetection.InstrumentPanel
-import com.sdpdigital.glassblockbar.ble.Utils
-import com.sdpdigital.glassblockbar.viewmodel.GlassBlockBarViewModel
 import org.hermit.android.instruments.SpectrumGauge
-import org.hermit.android.instruments.SpectrumGauge.OnBeatDetectedListener
 import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.math.*
 
 /**
@@ -30,6 +24,10 @@ import kotlin.math.*
 class EqualizerFragment : Fragment() {
 
     val LOG_TAG: String? = (EqualizerFragment::class).simpleName
+
+    private val app: GlassBlockLEDApplication? get() {
+        return activity?.application as? GlassBlockLEDApplication
+    }
 
     // Main thread handler
     val mainHandler = Handler()
@@ -57,8 +55,6 @@ class EqualizerFragment : Fragment() {
     var lastFpsTime = System.currentTimeMillis()
     var frameTimeInMillis = 1000f / 20f
     var forceBeatSend = false
-
-    var glassBlockViewModel: GlassBlockBarViewModel? = null
 
     val clearColor = Color.parseColor("#00ffffff")
     val blueColor = Color.parseColor("#0000ff")
@@ -126,8 +122,6 @@ class EqualizerFragment : Fragment() {
             relativeRoot.addView(instrumentPanel, 0)
         }
 
-        setupGlassBlockViewModel()
-
         return rootView
     }
 
@@ -165,14 +159,6 @@ class EqualizerFragment : Fragment() {
         super.onStop()
         // Stop audio analysis
         instrumentPanel?.onStop()
-    }
-
-    private fun setupGlassBlockViewModel() {
-        val app = activity?.application as? GlassBlockBarApplication
-        app?.let {
-            val factory = AppViewModelFactory(it)
-            glassBlockViewModel = ViewModelProvider(it, factory).get(GlassBlockBarViewModel::class.java)
-        }
     }
 
     private val onBeatDetectedListener: SpectrumGauge.OnBeatDetectedListener = object : SpectrumGauge.OnBeatDetectedListener {
@@ -274,8 +260,9 @@ class EqualizerFragment : Fragment() {
 //                            ByteArray(4) { i -> it[i].toByte() })
 //                }
 
-                glassBlockViewModel?.sendEqualizer(
-                        ByteArray(9) { i -> normalized[i].toByte() })
+                val eqMsg = ByteArray(9) { i -> normalized[i].toByte() }
+                // TOOD: fix this crashing the arduino app
+                //app?.writeBleMessage(eqMsg)
 
                 Arrays.fill(intensityFrameSum, 0.0)
             }

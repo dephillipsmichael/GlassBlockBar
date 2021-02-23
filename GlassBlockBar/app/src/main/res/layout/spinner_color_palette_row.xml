@@ -1,0 +1,13 @@
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/color_palette_spinner_height"
+    android:minHeight="@dimen/color_palette_spinner_height"
+    android:padding="@dimen/color_palette_spinner_padding">
+
+    <com.sdpdigital.glassblockbar.view.ColorPaletteView
+        android:id="@+id/color_palette_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+</RelativeLayout>

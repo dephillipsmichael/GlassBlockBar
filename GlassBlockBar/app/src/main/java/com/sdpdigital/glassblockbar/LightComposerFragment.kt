@@ -65,8 +65,11 @@ class LightComposerFragment : Fragment() {
         return index
     }
 
+    private val app: GlassBlockLEDApplication? get() {
+        return activity?.application as? GlassBlockLEDApplication
+    }
+
     // Data Model
-    private var glassBlockViewModel: GlassBlockBarViewModel? = null
     private var lightComposerViewModel: LightComposerViewModel? = null
 
     // Main thread handler
@@ -207,12 +210,6 @@ class LightComposerFragment : Fragment() {
         lightComposerViewModel?.bpmInfo?.observe(viewLifecycleOwner, Observer<BpmInfo> {
             refreshUi()
         })
-        // Glass block model is shared globally, so access it through app life cycle owner
-        val app = activity?.application as? GlassBlockBarApplication
-        app?.let {
-            val factory = AppViewModelFactory(it)
-            glassBlockViewModel = ViewModelProvider(it, factory).get(GlassBlockBarViewModel::class.java)
-        }
 
         refreshUi()
 
@@ -343,33 +340,6 @@ class LightComposerFragment : Fragment() {
 
     private var beatSeqMsgs: List<IntArray>? = null;
 
-    private fun sendBeat(currentBeat: Int) {
-
-        beatSeqMsgs?.let {
-            sendNextBeatSeq()
-            if (it.size <= 1) {
-                beatSeqMsgs = null
-            } else {
-                beatSeqMsgs = it.subList(0, it.size - 1)
-            }
-            return
-        }
-
-        val firstByte = if (currentBeat <= 255) { currentBeat } else { currentBeat - 255 }
-        val secondByte = if (currentBeat <= 255) { 0 } else { 255 }
-
-        if (currentBeat % 2 == 0) {
-            glassBlockViewModel?.sendBeatSequence(ByteArray(20) {
-                when (it) {
-                    0 -> return@ByteArray 4
-                    1 -> return@ByteArray firstByte.toByte()
-                    2 -> return@ByteArray secondByte.toByte()
-                }
-                return@ByteArray 0
-            })
-        }
-    }
-
     private fun resetBpmCounter() {
         lastTapTime = null
         sum = 0L
@@ -379,7 +349,7 @@ class LightComposerFragment : Fragment() {
     public fun sendBeatSequence(animationIndex: Int) {
         beatSequenceView?.getBeatSequence()?.let { sequence ->
             for (beatSeq in Utils.encodeBeatSequence(animationIndex, sequence)) {
-                glassBlockViewModel?.sendBeatSequence(ByteArray(20) {
+                app?.writeBleMessage(ByteArray(20) {
                     return@ByteArray beatSeq[it].toByte()
                 })
             }
@@ -387,7 +357,7 @@ class LightComposerFragment : Fragment() {
     }
 
     public fun sendBeatControllerStart() {
-        glassBlockViewModel?.sendBeatSequence(ByteArray(1) { 6 })
+        app?.writeBleMessage(ByteArray(1) { 6 })
     }
 
     private fun sendNextBeatSeq() {
@@ -395,7 +365,7 @@ class LightComposerFragment : Fragment() {
             return
         }
         val byteArray = ByteArray(it.size) { i -> it[i].toByte() }
-        glassBlockViewModel?.sendBeatSequence(byteArray)
+        app?.writeBleMessage(byteArray)
     }
 
     private fun clearBeatSequence() {
@@ -442,7 +412,7 @@ class LightComposerFragment : Fragment() {
         Log.d(LOG_TAG, "Sent new bpm offset $bpmOffsetMillis")
         val setBpmBytes = ByteArray(4)
             { i -> arrayOf(5, beatsPerMeasure, currentBpm(), currentBpmDelay())[i].toByte() }
-        glassBlockViewModel?.sendBpmInfo(setBpmBytes)
+        app?.writeBleMessage(setBpmBytes)
         lightComposerViewModel?.setBpmDelay(bpmOffsetMillis)
     }
 
@@ -454,7 +424,7 @@ class LightComposerFragment : Fragment() {
         Log.d(LOG_TAG, "Sent new bpm $newBpm")
         val setBpmBytes = ByteArray(4)
             { i -> arrayOf(5, beatsPerMeasure, currentBpm(), currentBpmDelay())[i].toByte() }
-        glassBlockViewModel?.sendBpmInfo(setBpmBytes)
+        app?.writeBleMessage(setBpmBytes)
 
         if (resetRange) {
             lightComposerViewModel?.setBpmAndRange(newBpm, startTime,

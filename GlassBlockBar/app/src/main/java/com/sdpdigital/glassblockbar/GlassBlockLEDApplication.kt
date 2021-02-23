@@ -3,7 +3,6 @@ package com.sdpdigital.glassblockbar
 import android.app.Activity
 import android.app.Application
 import android.bluetooth.*
-import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.Intent
@@ -18,9 +17,9 @@ import androidx.lifecycle.ViewModelStoreOwner
 import java.util.*
 import kotlin.collections.ArrayList
 
-class GlassBlockBarApplication : Application(), ViewModelStoreOwner {
+class GlassBlockLEDApplication : Application(), ViewModelStoreOwner {
 
-    val LOG_TAG = (GlassBlockBarApplication::class).simpleName
+    val LOG_TAG = (GlassBlockLEDApplication::class).simpleName
 
     val bleNamePrefix = "Glass Block Bar"
 

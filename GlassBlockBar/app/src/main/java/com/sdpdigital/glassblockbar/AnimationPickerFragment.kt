@@ -6,14 +6,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.sdpdigital.glassblockbar.view.AnimationChildViewGroups
 import com.sdpdigital.glassblockbar.view.AnimationChildViewGroups.PatternSelectorInput
 import com.sdpdigital.glassblockbar.view.AnimationChildViewGroups.SeekBarInput
 import com.sdpdigital.glassblockbar.view.RainbowExpandableAdapter
 import com.sdpdigital.glassblockbar.view.RainbowViewGroup
-import com.sdpdigital.glassblockbar.viewmodel.GlassBlockBarViewModel
 import com.thoughtbot.expandablerecyclerview.listeners.GroupExpandCollapseListener
 import com.thoughtbot.expandablerecyclerview.models.ExpandableGroup
 
@@ -28,25 +27,30 @@ class AnimationPickerFragment : Fragment() {
 
     val LOG_TAG: String? = (AnimationPickerFragment::class).simpleName
 
-    var glassBlockViewModel: GlassBlockBarViewModel? = null
+    private val app: GlassBlockLEDApplication? get() {
+        return activity?.application as? GlassBlockLEDApplication
+    }
 
     var recyclerView: RecyclerView? = null
 
+    val RAINBOW_TITLE = "Rainbow"
     val RAINBOW_ROW_TITLE = "Rainbow Row"
     val RAINBOW_SINE_TITLE = "Rainbow Sine"
-    val animations = listOf(RAINBOW_ROW_TITLE, RAINBOW_SINE_TITLE)
+    val TETRIS_TITLE = "Tetris"
+    val FADE_TITLE = "Fade"
+    val animations = listOf(RAINBOW_ROW_TITLE, RAINBOW_SINE_TITLE, TETRIS_TITLE, FADE_TITLE, RAINBOW_TITLE)
 
     /**
      * From Arduino code:
+     *    enum RainbowRowPattern {
+     *        Equal        = 0,
+     *        EqualOpp     = 1,
+     *        SlantedLeft  = 2,
+     *        SlantedRight = 3,
+     *        ArrowLeft    = 4,
+     *        ArrowRight   = 5
+     *    };
      */
-//    enum RainbowRowPattern {
-//        Equal        = 0,
-//        EqualOpp     = 1,
-//        SlantedLeft  = 2,
-//        SlantedRight = 3,
-//        ArrowLeft    = 4,
-//        ArrowRight   = 5
-//    };
     val OPPOSITE_PATTERN = "Opposite Rows" // Equal
     val CLASSIC_PATTERN = "Classic"        // Classic
     val SLANTED_LEFT_PATTERN = "Slanted Left"
@@ -66,6 +70,10 @@ class AnimationPickerFragment : Fragment() {
             SINE_PATTERN_BLOCK, SINE_BLOCK_PATTERN_1GAP, SINE_BLOCK_PATTERN_2GAP, SINE_BLOCK_PATTERN_3GAP,
             SINE_LED_PATTERN)
 
+    val COLOR_CHANGE_PATTERN = "Color Changing"
+    val tetrisPatterns = arrayOf(
+            CLASSIC_PATTERN, COLOR_CHANGE_PATTERN)
+
     val CIRCLE_PATTERN = "Circle"
 
     val functionOff = -1
@@ -73,19 +81,30 @@ class AnimationPickerFragment : Fragment() {
 
     // data to populate the RecyclerView with
     val startSpeed = 8
+    val tetrisStartSpeed = 24
     val animationGroups = listOf(
         RainbowViewGroup(RAINBOW_ROW_TITLE, listOf(
-            SeekBarInput(startSpeed, "Animation Speed"),
+            SeekBarInput(startSpeed, "Animation Speed", -24, 24),
             PatternSelectorInput(rainbowRowPatterns, 0)
         )),
         RainbowViewGroup(RAINBOW_SINE_TITLE, listOf(
-                SeekBarInput(startSpeed, "Animation Speed"),
-                PatternSelectorInput(rainbowSinePatterns, 0)
+            SeekBarInput(startSpeed, "Animation Speed", -24, 24),
+            PatternSelectorInput(rainbowSinePatterns, 0)
+        )),
+        RainbowViewGroup(TETRIS_TITLE, listOf(
+            SeekBarInput(tetrisStartSpeed, "Animation Speed", 0, 48),
+            PatternSelectorInput(tetrisPatterns, 0)
+        )),
+        RainbowViewGroup(FADE_TITLE, listOf(
+            SeekBarInput(tetrisStartSpeed, "Animation Speed", 0, 48),
+            AnimationChildViewGroups.ColorGroupPickerInput(0)
+        )),
+        RainbowViewGroup(RAINBOW_TITLE, listOf(
+            SeekBarInput(0, "Does nothing", 0, 48)
         ))
     )
     val adapter = RainbowExpandableAdapter(animationGroups)
-    var rainbowRowPatternIdx = 0
-    var rainbowSinePatternIdx = 0
+    var patternIdxs = mutableListOf(0, 0, 0, 0, 0)
 
     fun seekBarProgress(groupIdx: Int): Int {
         (animationGroups[groupIdx].items?.firstOrNull() as? SeekBarInput)?.let {
@@ -113,8 +132,6 @@ class AnimationPickerFragment : Fragment() {
         recyclerView = rootView.findViewById(R.id.recycler_view_animations)
         setupAnimationRecyclerView()
 
-        setupGlassBlockViewModel()
-
         return rootView
     }
 
@@ -127,77 +144,41 @@ class AnimationPickerFragment : Fragment() {
             }
 
             override fun onGroupExpanded(group: ExpandableGroup<*>?) {
-                group?.let { groupUnwrapped ->
-                    adapter.collapseAllGroups(groupUnwrapped)
-
-                    groupIndexOf(groupUnwrapped.title)?.let {
-                        val patternIdx = when(it) {
-                            0 -> rainbowRowPatternIdx
-                            1 -> rainbowSinePatternIdx
-                            else -> 0
-                        }
-                        sendAnimationAndSpeed(it, patternIdx)
-                    }
-                }
+                val groupUnwrapped = group ?: run { return }
+                adapter.collapseAllGroups(groupUnwrapped)
+                sendAnimationAndSpeedAndPattern(groupUnwrapped.title)
             }
         })
 
         adapter.childListener = object: RainbowExpandableAdapter.OnAnimationInputChangedListener {
             override fun seekbarChanged(group: ExpandableGroup<*>?, childIndex: Int, progress: Int) {
-
-                when (group?.title) {
-                    RAINBOW_ROW_TITLE -> {
-                        groupIndexOf(group.title)?.let {
-                            sendAnimationAndSpeed(it, rainbowRowPatternIdx)
-                        }
-                    }
-                    RAINBOW_SINE_TITLE -> {
-                        groupIndexOf(group.title)?.let {
-                            sendAnimationAndSpeed(it, rainbowSinePatternIdx)
-                        }
-                    }
-                }
+                sendAnimationAndSpeedAndPattern(group?.title)
             }
 
             override fun onNewPatternSelected(group: ExpandableGroup<*>?, childIndex: Int, pattern: Int) {
-                when (group?.title) {
-                    RAINBOW_ROW_TITLE -> {
-                        groupIndexOf(group.title)?.let {
-                            rainbowRowPatternIdx = pattern
-                            sendAnimationAndSpeed(it, rainbowRowPatternIdx)
-                        }
-                    }
-                    RAINBOW_SINE_TITLE -> {
-                        rainbowSinePatternIdx = pattern
-                        groupIndexOf(group.title)?.let {
-                            sendAnimationAndSpeed(it, rainbowSinePatternIdx)
-                        }
-                    }
-                }
+                val groupIdx = groupIndexOf(group?.title ?: "") ?: run { return }
+                patternIdxs[groupIdx] = pattern
+                sendAnimationAndSpeedAndPattern(group?.title)
             }
         }
         recyclerView?.adapter = adapter
     }
 
-    private fun sendAnimationAndSpeed(groupIdx: Int, patternIdx: Int) {
+    private fun sendAnimationAndSpeedAndPattern(groupTitleMaybeNull: String?) {
+        val groupTitle = groupTitleMaybeNull ?: run { return }
+        val groupIdx = groupIndexOf(groupTitle) ?: run { return }
+        val patternIdx = patternIdxs[groupIdx]
+
         selectedFunction = groupIdx
 
         val speed = seekBarProgress(groupIdx)
-        Log.d(LOG_TAG, "Sent Rainbow row $patternIdx change $speed")
+        Log.d(LOG_TAG, "Sent $groupTitle change pattern $patternIdx speed $speed")
         val speedChangeARGB = ByteArray(4)
             { i -> arrayOf(1, groupIdx, patternIdx, speed)[i].toByte() }
-        glassBlockViewModel?.sendARGB(speedChangeARGB)
+        app?.writeBleMessage(speedChangeARGB)
     }
 
     private fun groupIndexOf(title: String): Int? {
         return animations.indexOf(title)
-    }
-
-    private fun setupGlassBlockViewModel() {
-        val app = activity?.application as? GlassBlockBarApplication
-        app?.let {
-            val factory = AppViewModelFactory(it)
-            glassBlockViewModel = ViewModelProvider(it, factory).get(GlassBlockBarViewModel::class.java)
-        }
     }
 }

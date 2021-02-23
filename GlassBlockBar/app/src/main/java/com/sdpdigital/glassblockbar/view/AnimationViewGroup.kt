@@ -1,12 +1,12 @@
 package com.sdpdigital.glassblockbar.view
 
 import android.os.Parcelable
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.SeekBar
-import android.widget.TextView
+import android.widget.*
+import android.widget.AdapterView.OnItemSelectedListener
 import androidx.appcompat.widget.AppCompatSeekBar
 import androidx.core.content.res.ResourcesCompat
 import com.sdpdigital.glassblockbar.R
@@ -17,6 +17,7 @@ import com.thoughtbot.expandablerecyclerview.MultiTypeExpandableRecyclerViewAdap
 import com.thoughtbot.expandablerecyclerview.models.ExpandableGroup
 import com.thoughtbot.expandablerecyclerview.viewholders.ChildViewHolder
 import com.thoughtbot.expandablerecyclerview.viewholders.GroupViewHolder
+import java.util.*
 
 
 // Rainbow animation classes for expandable recycler view sdk
@@ -47,10 +48,11 @@ public class SeekBarInputChildViewHolder(itemView: View) : ChildViewHolder(itemV
     val titleTextView: TextView
 
     fun setRainbowSetting(setting: SeekBarInput) {
+        seekBarAnimSpeed.max = setting.progressEnd - setting.progressStart
         seekBarAnimSpeed.progress = setting.seekBarProgress
         val title = setting.title
-        val progressStr = setting.seekBarProgress.toString()
-        titleTextView.text =  "$title - $progressStr"
+        val progressVal = setting.seekBarProgress + setting.progressStart
+        titleTextView.text =  "$title $progressVal"
     }
 
     init {
@@ -75,11 +77,53 @@ public class PatternSelectorInputChildViewHolder(itemView: View) : ChildViewHold
     }
 }
 
+public class ColorPickerInputChildViewHolder(itemView: View) : ChildViewHolder(itemView) {
+    val spinner: Spinner
+
+    fun setColorPickerSetting(setting: AnimationChildViewGroups.ColorGroupPickerInput) {
+        spinner.setSelection(setting.colorIdx)
+    }
+
+    init {
+        spinner = itemView.findViewById(R.id.spinner_color_palette)
+
+        val colorPalettes: MutableList<ColorPalette> = ArrayList()
+        colorPalettes.add(ColorPalette.createRainbowColorPalette())
+        colorPalettes.add(ColorPalette.createCoolWinterTones())
+        colorPalettes.add(ColorPalette.createPinkTones())
+        colorPalettes.add(ColorPalette.createIndiansPalette())
+        colorPalettes.addAll(ColorPalette.createComplimentaryColorsCombos())
+        colorPalettes.add(ColorPalette.createRgbColorPalette())
+        colorPalettes.add(ColorPalette.createOgyColorPalette())
+        colorPalettes.addAll(ColorPalette.createComplimentaryColorsWithWhite())
+        colorPalettes.addAll(ColorPalette.createComplimentaryColors())
+        colorPalettes.add(ColorPalette.createArmyTonesPalette())
+        colorPalettes.addAll(ColorPalette.createOnlinePalettes())
+
+        spinner.adapter = ColorPaletteSpinnerAdapter(
+                spinner.context, R.layout.spinner_color_palette_row, colorPalettes)
+
+        spinner.setSelection(0)
+
+        spinner.setOnItemSelectedListener(object : OnItemSelectedListener {
+            override fun onItemSelected(adapterView: AdapterView<*>?, view: View, idx: Int, l: Long) {
+                Log.d("TODO_REMOVE", "Index selected $idx")
+            }
+
+            override fun onNothingSelected(adapterView: AdapterView<*>?) {
+                // What should we do here?
+                Log.d("TODO_REMOVE", "Nothing selected")
+            }
+        })
+    }
+}
+
 public class RainbowExpandableAdapter(groups: List<ExpandableGroup<*>?>?) :
     MultiTypeExpandableRecyclerViewAdapter<BaseAnimationGroupViewHolder, ChildViewHolder>(groups) {
 
     val SEEK_BAR_VIEW_TYPE = 3
     val PATTERN_VIEW_TYPE = 4
+    val COLOR_PICKER_VIEW_TYPE = 5
 
     var childListener: OnAnimationInputChangedListener? = null
 
@@ -105,11 +149,16 @@ public class RainbowExpandableAdapter(groups: List<ExpandableGroup<*>?>?) :
             return PATTERN_VIEW_TYPE
         }
 
+        (group.items[childIndex] as? AnimationChildViewGroups.ColorGroupPickerInput)?.let {
+            return COLOR_PICKER_VIEW_TYPE
+        }
+
         return 2 // default child index
     }
 
     override fun isChild(viewType: Int): Boolean {
-        return viewType == SEEK_BAR_VIEW_TYPE || viewType == PATTERN_VIEW_TYPE
+        return viewType == SEEK_BAR_VIEW_TYPE || viewType == PATTERN_VIEW_TYPE ||
+                viewType == COLOR_PICKER_VIEW_TYPE
     }
 
     override fun onCreateGroupViewHolder(parent: ViewGroup, viewType: Int): BaseAnimationGroupViewHolder {
@@ -119,14 +168,22 @@ public class RainbowExpandableAdapter(groups: List<ExpandableGroup<*>?>?) :
     }
 
     override fun onCreateChildViewHolder(parent: ViewGroup, viewType: Int): ChildViewHolder {
-        return if (viewType == SEEK_BAR_VIEW_TYPE) {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.view_child_seekbar, parent, false)
-            SeekBarInputChildViewHolder(view)
-        } else { // PATTERN_VIEW_TYPE
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.view_child_pattern_selection, parent, false)
-            PatternSelectorInputChildViewHolder(view)
+        return when (viewType) {
+            SEEK_BAR_VIEW_TYPE -> {
+                val view = LayoutInflater.from(parent.context)
+                        .inflate(R.layout.view_child_seekbar, parent, false)
+                SeekBarInputChildViewHolder(view)
+            }
+            PATTERN_VIEW_TYPE -> {
+                val view = LayoutInflater.from(parent.context)
+                        .inflate(R.layout.view_child_pattern_selection, parent, false)
+                PatternSelectorInputChildViewHolder(view)
+            }
+            else -> { // COLOR_PICKER_VIEW_TYPE
+                val view = LayoutInflater.from(parent.context)
+                        .inflate(R.layout.view_child_color_picker, parent, false)
+                ColorPickerInputChildViewHolder(view)
+            }
         }
     }
 
@@ -137,12 +194,16 @@ public class RainbowExpandableAdapter(groups: List<ExpandableGroup<*>?>?) :
         (holder as? SeekBarInputChildViewHolder)?.let {
             (group?.items?.get(childIndex) as? SeekBarInput)?.let { seekBarSetting ->
                 holder?.setRainbowSetting(seekBarSetting)
-                holder?.seekBarAnimSpeed?.setOnSeekBarChangeListener(object: SeekBar.OnSeekBarChangeListener{
+                holder?.seekBarAnimSpeed?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(p0: SeekBar?, progress: Int, p2: Boolean) {
                         seekBarSetting.seekBarProgress = progress
                         holder?.setRainbowSetting(seekBarSetting)
                     }
-                    override fun onStartTrackingTouch(p0: SeekBar?) { /** no-op */ }
+
+                    override fun onStartTrackingTouch(p0: SeekBar?) {
+                        /** no-op */
+                    }
+
                     override fun onStopTrackingTouch(seekBar: SeekBar?) {
                         seekBar?.progress?.let {
                             childListener?.seekbarChanged(group, childIndex, it)
@@ -151,7 +212,6 @@ public class RainbowExpandableAdapter(groups: List<ExpandableGroup<*>?>?) :
                 })
             }
         }
-
 
         // Pattern selector item
         (holder as? PatternSelectorInputChildViewHolder)?.let {
@@ -179,6 +239,13 @@ public class RainbowExpandableAdapter(groups: List<ExpandableGroup<*>?>?) :
                         notifyDataSetChanged()
                     }
                 })
+            }
+        }
+
+        // Color picker item
+        (holder as? ColorPickerInputChildViewHolder)?.let {
+            (group?.items?.get(childIndex) as? AnimationChildViewGroups.ColorGroupPickerInput)?.let { colorSetting ->
+                holder?.setColorPickerSetting(colorSetting)
             }
         }
     }

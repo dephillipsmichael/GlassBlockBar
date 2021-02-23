@@ -12,9 +12,7 @@ import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import androidx.appcompat.widget.AppCompatSeekBar
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
 import com.sdpdigital.glassblockbar.beatdetection.InstrumentPanel
-import com.sdpdigital.glassblockbar.viewmodel.GlassBlockBarViewModel
 import org.hermit.android.instruments.SpectrumGauge
 import kotlin.math.max
 import kotlin.math.min
@@ -61,7 +59,9 @@ class BeatDetectorFragment : Fragment() {
     val resetDuration = 2000 // every 2 seconds
     var runningWindowHighestLowMidHighIntensities = arrayOf(0f, 0f, 0f)
 
-    var glassBlockViewModel: GlassBlockBarViewModel? = null
+    private val app: GlassBlockLEDApplication? get() {
+        return activity?.application as? GlassBlockLEDApplication
+    }
 
     val seekBarProgress = arrayOf(0f, 0f, 0f)
     var lowsSeekBar: AppCompatSeekBar? = null
@@ -117,8 +117,6 @@ class BeatDetectorFragment : Fragment() {
         lowBeatView = rootView.findViewById(R.id.low_beat_view)
         midBeatView = rootView.findViewById(R.id.mid_beat_view)
         highBeatView = rootView.findViewById(R.id.high_beat_view)
-
-        setupGlassBlockViewModel()
 
         return rootView
     }
@@ -188,18 +186,10 @@ class BeatDetectorFragment : Fragment() {
         if (canSendBeat[lowMidHighIdx]) {
             canSendBeat[lowMidHighIdx] = false
             val newLowMidHigh = ByteArray(3) { idx -> lowMidHighValues[idx].toByte() }
-            glassBlockViewModel?.sendLowMidHigh(newLowMidHigh)
+            app?.writeBleMessage(newLowMidHigh)
             return true
         }
         return false
-    }
-
-    private fun setupGlassBlockViewModel() {
-        val app = activity?.application as? GlassBlockBarApplication
-        app?.let {
-            val factory = AppViewModelFactory(it)
-            glassBlockViewModel = ViewModelProvider(it, factory).get(GlassBlockBarViewModel::class.java)
-        }
     }
 
     /*

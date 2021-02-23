@@ -19,11 +19,6 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
-import com.sdpdigital.glassblockbar.ble.DiscoveredBluetoothDevice
-import com.sdpdigital.glassblockbar.viewmodel.GlassBlockBarViewModel
-import no.nordicsemi.android.ble.livedata.state.ConnectionState
 import java.util.*
 
 /**
@@ -68,8 +63,6 @@ class BleConnectionActivity : AppCompatActivity(), BleEventListener {
     var connectionStateText: TextView? = null
     var progressBar: ProgressBar? = null
 
-    var glassBlockViewModel: GlassBlockBarViewModel? = null
-
     val mainHandler = Handler()
 
     val SKIP_CONNECTION = false
@@ -79,8 +72,8 @@ class BleConnectionActivity : AppCompatActivity(), BleEventListener {
     val LED_SERVICE_UUID =
         UUID.fromString("6e400010-b5a3-f393-e0a9-e50e24dcca9e")
 
-    private val app: GlassBlockBarApplication? get() {
-        return (application as? GlassBlockBarApplication)
+    private val app: GlassBlockLEDApplication? get() {
+        return (application as? GlassBlockLEDApplication)
     }
 
     private val bluetoothAdapter: BluetoothAdapter? get() {
@@ -108,8 +101,6 @@ class BleConnectionActivity : AppCompatActivity(), BleEventListener {
 
         // Let user know we are starting scanning
         connectionStateText?.text = "Scanning..."
-
-        setupGlassBlockViewModel()
     }
 
     override fun onResume() {
@@ -199,28 +190,6 @@ class BleConnectionActivity : AppCompatActivity(), BleEventListener {
             val scanSettings = app?.scanSettings ?: run { return@post }
             scanCallback = createScanCallback()
             bleScanner?.startScan(null, scanSettings, scanCallback)
-        }
-    }
-
-    private fun setupGlassBlockViewModel() {
-        (application as? GlassBlockBarApplication)?.let {
-            val factory = AppViewModelFactory(it)
-            glassBlockViewModel = ViewModelProvider(it, factory).get(GlassBlockBarViewModel::class.java)
-            // Connection state observer
-            val connectionObserver = Observer<ConnectionState> { connectionState  ->
-                // Update the UI, in this case, a TextView.
-                Log.d(LOG_TAG, "New connection state $connectionState")
-                when(connectionState) {
-                    ConnectionState.Connecting -> onDeviceConnecting()
-                    ConnectionState.Ready -> onDeviceReady()
-                    ConnectionState.Initializing -> onDeviceInitializing()
-                    ConnectionState.Disconnecting -> onDeviceDisconnecting()
-                    else -> {
-                        // no-op
-                    }
-                }
-            }
-            glassBlockViewModel?.connectionState?.observe(this, connectionObserver)
         }
     }
 
